@@ -1,0 +1,9 @@
+/*
+ * Styles propres au démonstrateur de filtrage
+ * -------------------------------------------
+ * Ce fichier est volontairement chargé après les styles communs. Il peut donc
+ * adapter un composant partagé sans modifier les autres démonstrateurs.
+ */
+
+/* Les règles spécifiques seront déplacées ici au fur et à mesure que les
+   différences entre démonstrateurs seront connues. */

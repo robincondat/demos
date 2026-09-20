@@ -1,0 +1,98 @@
+/*
+ * En-tête partagé
+ * ---------------
+ * Les informations sont fournies par les attributs du composant
+ * <course-header>. Les variables peuvent être surchargées par une démo.
+ */
+course-header.course-header {
+  --header-background: var(--color-primary, #087ee6);
+  --header-border: #096cc5;
+  --header-text: #ffffff;
+
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 280px;
+  align-items: stretch;
+  width: min(1600px, calc(100% - 36px));
+  max-width: 1600px;
+  margin: 12px auto 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--header-text);
+  background: var(--header-background);
+  border: 1px solid var(--header-border);
+  border-radius: 11px;
+  box-shadow: 0 4px 16px #075eae2e;
+}
+
+.course-header h1 {
+  align-self: center;
+  margin: 0;
+  padding: 0 18px;
+  color: var(--header-text);
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.course-identity {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 66px;
+  padding: 12px 18px;
+  color: var(--header-text);
+  line-height: 1.12;
+}
+
+.course-identity strong {
+  color: var(--header-text);
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+}
+
+.course-identity span {
+  margin-top: 4px;
+  color: #eaf5ff;
+  font-size: 0.84rem;
+}
+
+.course-header .instructor {
+  align-self: center;
+  justify-self: end;
+  padding-right: 18px;
+  color: var(--header-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+@media (max-width: 850px) {
+  course-header.course-header {
+    grid-template-columns: 220px minmax(0, 1fr) 180px;
+  }
+}
+
+@media (max-width: 560px) {
+  course-header.course-header {
+    grid-template-columns: 1fr auto;
+    width: calc(100% - 20px);
+    margin-top: 10px;
+  }
+
+  .course-header h1 {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    padding: 13px 12px;
+    text-align: center;
+  }
+
+  .course-identity {
+    grid-row: 2;
+    min-height: 56px;
+    padding: 10px 13px;
+  }
+
+  .course-header .instructor {
+    grid-row: 2;
+    padding: 0 13px;
+  }
+}

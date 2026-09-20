@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Comparez en direct les filtres moyenneur, médian, gaussien et les noyaux de convolution personnalisés."
+    />
+    <title>TIM - Filtrage</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101a2c'/%3E%3Cg fill='%234fd1c5'%3E%3Crect x='12' y='12' width='11' height='11' rx='2'/%3E%3Crect x='27' y='12' width='11' height='11' rx='2'/%3E%3Crect x='42' y='12' width='11' height='11' rx='2'/%3E%3Crect x='12' y='27' width='11' height='11' rx='2'/%3E%3Crect x='27' y='27' width='11' height='11' rx='2' fill='%23f3b743'/%3E%3Crect x='42' y='27' width='11' height='11' rx='2'/%3E%3Crect x='12' y='42' width='11' height='11' rx='2'/%3E%3Crect x='27' y='42' width='11' height='11' rx='2'/%3E%3Crect x='42' y='42' width='11' height='11' rx='2'/%3E%3C/g%3E%3C/svg%3E"
+    />
+    <!-- Composants communs à tous les démonstrateurs TIM. -->
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/image-viewer.css" />
+    <link rel="stylesheet" href="../../shared/styles/theme.css" />
+    <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+    <!-- Ajustements propres au démonstrateur de filtrage. -->
+    <link rel="stylesheet" href="./styles/filtrage.css" />
+  </head>
+  <body>
+    <!-- Le titre est configurable indépendamment pour chaque démonstrateur. -->
+    <course-header
+      page-title="Filtrage"
+      course-code="TIM"
+      course-name="Traitement d’Images"
+      instructor="Robin Condat"
+    ></course-header>
+    <div class="runtime" aria-live="polite" hidden>
+      <span id="runtimeDot"></span
+      ><span id="runtimeText">Chargement d’OpenCV…</span>
+    </div>
+
+    <main>
+      <!-- Chargement et export de l'image -->
+      <section class="upload-row" aria-label="Chargement de l’image">
+        <label class="file-button" for="imageInput">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5" />
+          </svg>
+          Charger une image
+        </label>
+        <input
+          id="imageInput"
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.pbm,.pgm,.ppm,image/jpeg,image/png,image/webp,image/bmp,image/tiff"
+        />
+        <div class="file-meta" hidden>
+          <strong id="fileName">Aucune image chargée</strong>
+          <span id="imageMeta"
+            >JPEG, PNG, WebP, BMP, TIFF, PBM, PGM ou PPM</span
+          >
+        </div>
+        <button
+          id="downloadButton"
+          class="secondary-button"
+          type="button"
+          disabled
+        >
+          Télécharger le résultat
+        </button>
+      </section>
+
+      <!-- Espace de travail : visualisation à gauche, paramètres à droite -->
+      <div class="workspace-layout">
+        <div class="visual-workspace">
+          <!-- Comparaison originale / résultat -->
+          <section class="comparison" aria-label="Comparaison des images">
+            <article class="image-panel">
+              <div class="panel-heading">
+                <h2>Image originale</h2>
+                <span id="originalBadge" hidden>—</span>
+              </div>
+              <div class="canvas-stage empty" id="originalStage">
+                <canvas id="originalCanvas"></canvas>
+                <div class="empty-state">
+                  <p>Chargez une image pour commencer</p>
+                </div>
+              </div>
+            </article>
+            <article class="image-panel">
+              <div class="panel-heading">
+                <h2>Image traitée</h2>
+                <span id="resultBadge" hidden>—</span>
+              </div>
+              <div class="canvas-stage empty" id="resultStage">
+                <canvas id="resultCanvas"></canvas>
+                <div class="empty-state"><p>Le résultat apparaîtra ici</p></div>
+                <div class="processing" id="processing" hidden>Calcul…</div>
+              </div>
+            </article>
+          </section>
+
+          <!-- Plages d'affichage et navigation synchronisée -->
+          <section class="display-tools" aria-label="Options d’affichage">
+            <div
+              class="display-settings"
+              aria-labelledby="originalDisplayTitle"
+            >
+              <div class="display-settings-heading">
+                <strong id="originalDisplayTitle"
+                  >Affichage de l’image originale</strong
+                >
+                <label class="check compact-check"
+                  ><input id="originalAutoRange" type="checkbox" /><span
+                    >Normalisation min–max</span
+                  ></label
+                >
+              </div>
+              <div class="display-range-fields">
+                <label class="field"
+                  ><span>Valeur noire</span
+                  ><input
+                    id="originalDisplayMin"
+                    type="number"
+                    step="any"
+                    value="0"
+                /></label>
+                <span class="range-arrow" aria-hidden="true">→</span>
+                <label class="field"
+                  ><span>Valeur blanche</span
+                  ><input
+                    id="originalDisplayMax"
+                    type="number"
+                    step="any"
+                    value="255"
+                /></label>
+              </div>
+              <p
+                class="validation display-validation"
+                id="originalDisplayRangeError"
+                role="alert"
+              ></p>
+            </div>
+
+            <div
+              class="view-toolbar"
+              aria-label="Navigation synchronisée dans les images"
+            >
+              <div class="view-toolbar-heading">
+                <strong>Navigation</strong>
+              </div>
+              <div class="zoom-controls">
+                <input
+                  id="zoomSlider"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="384"
+                  aria-label="Niveau de zoom"
+                  disabled
+                />
+                <output id="zoomLabel" for="zoomSlider" aria-live="polite"
+                  >100 %</output
+                >
+                <button id="fitView" type="button" disabled>Ajuster</button>
+              </div>
+            </div>
+
+            <div class="display-settings" aria-labelledby="resultDisplayTitle">
+              <div class="display-settings-heading">
+                <strong id="resultDisplayTitle"
+                  >Affichage de l’image traitée</strong
+                >
+                <label class="check compact-check"
+                  ><input id="resultAutoRange" type="checkbox" /><span
+                    >Normalisation min–max</span
+                  ></label
+                >
+              </div>
+              <div class="display-range-fields">
+                <label class="field"
+                  ><span>Valeur noire</span
+                  ><input
+                    id="resultDisplayMin"
+                    type="number"
+                    step="any"
+                    value="0"
+                /></label>
+                <span class="range-arrow" aria-hidden="true">→</span>
+                <label class="field"
+                  ><span>Valeur blanche</span
+                  ><input
+                    id="resultDisplayMax"
+                    type="number"
+                    step="any"
+                    value="255"
+                /></label>
+              </div>
+              <p
+                class="validation display-validation"
+                id="resultDisplayRangeError"
+                role="alert"
+              ></p>
+            </div>
+          </section>
+
+          <!-- Mesures, valeurs sous le curseur et histogrammes -->
+          <section class="analysis-strip" aria-label="Analyse des images">
+            <article class="analysis-panel image-information">
+              <h2>Informations sur l’image</h2>
+              <dl>
+                <div>
+                  <dt>Dimensions</dt>
+                  <dd id="infoDimensions">—</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd id="infoType">—</dd>
+                </div>
+                <div>
+                  <dt>Plage originale</dt>
+                  <dd id="infoOriginalRange">—</dd>
+                </div>
+                <div>
+                  <dt>Taille du fichier</dt>
+                  <dd id="infoFileSize">—</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="analysis-panel cursor-information">
+              <h2>Valeurs sous le curseur</h2>
+              <dl>
+                <div>
+                  <dt>Position</dt>
+                  <dd id="cursorPosition">—</dd>
+                </div>
+                <div>
+                  <dt>Originale</dt>
+                  <dd id="cursorOriginal">—</dd>
+                </div>
+                <div>
+                  <dt>Traitée</dt>
+                  <dd id="cursorResult">—</dd>
+                </div>
+                <div>
+                  <dt>Différence</dt>
+                  <dd id="cursorDifference">—</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="analysis-panel histogram-panel">
+              <h2>Histogrammes</h2>
+              <div class="histograms">
+                <figure>
+                  <figcaption>
+                    Originale <span id="originalHistogramRange">—</span>
+                  </figcaption>
+                  <canvas
+                    id="originalHistogram"
+                    width="360"
+                    height="120"
+                  ></canvas>
+                </figure>
+                <figure>
+                  <figcaption>
+                    Traitée <span id="resultHistogramRange">—</span>
+                  </figcaption>
+                  <canvas
+                    id="resultHistogram"
+                    width="360"
+                    height="120"
+                  ></canvas>
+                </figure>
+              </div>
+            </article>
+          </section>
+        </div>
+
+        <!-- Choix du filtre et paramètres associés -->
+        <aside class="workbench" aria-label="Paramètres de filtrage">
+          <div class="section-title">
+            <div><h2>Choisir le filtre</h2></div>
+          </div>
+          <fieldset class="filter-options" id="filterOptions">
+            <legend class="sr-only">Type de filtre</legend>
+            <label
+              ><input type="radio" name="filter" value="mean" checked /><span
+                ><b>Moyenneur</b></span
+              ></label
+            >
+            <label
+              ><input type="radio" name="filter" value="median" /><span
+                ><b>Médian</b></span
+              ></label
+            >
+            <label
+              ><input type="radio" name="filter" value="gaussian" /><span
+                ><b>Gaussien</b></span
+              ></label
+            >
+            <label
+              ><input type="radio" name="filter" value="convolution" /><span
+                ><b>Convolution</b></span
+              ></label
+            >
+          </fieldset>
+
+          <div
+            class="filter-parameter-panel"
+            id="parameterPanel"
+            data-filter="mean"
+          >
+            <div class="section-title compact">
+              <div>
+                <h2 id="parameterTitle">Paramètres du filtre moyenneur</h2>
+                <p id="parameterDescription" hidden>
+                  Configurez le noyau et le traitement des bords.
+                </p>
+              </div>
+            </div>
+
+            <div class="parameter-content">
+              <section
+                class="parameter-section"
+                id="kernelSizeSection"
+                aria-labelledby="kernelSizeTitle"
+              >
+                <div class="parameter-heading">
+                  <h3 id="kernelSizeTitle">Dimension du noyau</h3>
+                  <p id="kernelHint">
+                    Toutes les dimensions positives sont acceptées.
+                  </p>
+                </div>
+                <div class="inline-fields">
+                  <label class="field"
+                    ><span id="kernelWidthLabel">Largeur</span
+                    ><input
+                      id="kernelWidth"
+                      type="number"
+                      min="1"
+                      max="31"
+                      step="1"
+                      value="3"
+                  /></label>
+                  <span
+                    class="multiply"
+                    id="dimensionSeparator"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <label class="field" id="heightField"
+                    ><span>Hauteur</span
+                    ><input
+                      id="kernelHeight"
+                      type="number"
+                      min="1"
+                      max="31"
+                      step="1"
+                      value="3"
+                  /></label>
+                </div>
+                <p class="validation" id="dimensionError" role="alert"></p>
+              </section>
+
+              <section class="parameter-section" aria-labelledby="borderTitle">
+                <div class="parameter-heading">
+                  <h3 id="borderTitle">Gestion des bords</h3>
+                  <p>Extension appliquée avant le calcul.</p>
+                </div>
+                <label class="field full"
+                  ><span>Méthode</span
+                  ><select id="borderType">
+                    <option value="constant">Constante</option>
+                    <option value="replicate">Réplication</option>
+                    <option value="reflect">Réflexion</option>
+                    <option value="reflect101">Réflexion 101</option>
+                  </select></label
+                >
+                <label class="field full" id="borderValueField" hidden
+                  ><span>Valeur du bord (0–255)</span
+                  ><input
+                    id="borderValue"
+                    type="number"
+                    min="0"
+                    max="255"
+                    step="1"
+                    value="0"
+                /></label>
+                <div class="border-preview">
+                  <span>Aperçu du prolongement</span>
+                  <div
+                    class="border-demo"
+                    id="borderDemo"
+                    aria-live="polite"
+                  ></div>
+                </div>
+              </section>
+
+              <section
+                class="parameter-section filter-specific"
+                id="gaussianControls"
+                aria-labelledby="sigmaTitle"
+                hidden
+              >
+                <div class="parameter-heading">
+                  <h3 id="sigmaTitle">Écart-type</h3>
+                  <p>Contrôle la dispersion du noyau gaussien.</p>
+                </div>
+                <div class="inline-fields sigma-fields">
+                  <label class="field"
+                    ><span>σX</span
+                    ><input
+                      id="sigmaX"
+                      type="number"
+                      min="0"
+                      max="20"
+                      step="0.1"
+                      value="1"
+                  /></label>
+                  <label class="field"
+                    ><span>σY</span
+                    ><input
+                      id="sigmaY"
+                      type="number"
+                      min="0"
+                      max="20"
+                      step="0.1"
+                      value="1"
+                      disabled
+                  /></label>
+                </div>
+                <label class="check"
+                  ><input id="linkSigma" type="checkbox" checked /><span
+                    >Utiliser σX pour σY</span
+                  ></label
+                >
+              </section>
+
+              <section
+                class="parameter-section filter-specific kernel-editor-block"
+                id="convolutionControls"
+                aria-labelledby="kernelEditorTitle"
+                hidden
+              >
+                <div class="parameter-heading">
+                  <h3 id="kernelEditorTitle">Noyau de convolution</h3>
+                  <p>Ouvrez le tableau pour modifier ses coefficients.</p>
+                </div>
+                <button
+                  id="openKernelEditor"
+                  class="secondary-button kernel-editor-trigger"
+                  type="button"
+                >
+                  Modifier le noyau…
+                </button>
+                <p class="kernel-inline-summary" hidden>
+                  <span id="kernelShape">3 × 3</span> · Somme :
+                  <strong id="kernelInlineSum">1</strong>
+                </p>
+              </section>
+            </div>
+          </div>
+
+          <div class="footer-actions">
+            <button
+              id="resetButton"
+              class="secondary-button reset-button"
+              type="button"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68" />
+              </svg>
+              <span>Réinitialiser les paramètres</span>
+            </button>
+            <span id="timing" aria-live="polite" hidden>
+              En attente d’une image</span
+            >
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <!-- Éditeur du noyau de convolution -->
+    <dialog
+      id="kernelDialog"
+      class="kernel-dialog"
+      aria-labelledby="kernelDialogTitle"
+    >
+      <div class="kernel-dialog-heading">
+        <div>
+          <p class="eyebrow">CONVOLUTION</p>
+          <h2 id="kernelDialogTitle">Modifier le noyau</h2>
+        </div>
+        <button
+          id="closeKernelDialogIcon"
+          class="dialog-close-icon"
+          type="button"
+          aria-label="Fermer"
+        >
+          ×
+        </button>
+      </div>
+      <div class="kernel-dialog-size">
+        <div>
+          <span class="kernel-dialog-size-title">Dimension du noyau</span>
+        </div>
+        <label class="field"
+          ><span>Largeur</span
+          ><input
+            id="convolutionKernelWidth"
+            type="number"
+            min="1"
+            max="31"
+            step="1"
+            value="3"
+        /></label>
+        <span class="multiply" aria-hidden="true">×</span>
+        <label class="field"
+          ><span>Hauteur</span
+          ><input
+            id="convolutionKernelHeight"
+            type="number"
+            min="1"
+            max="31"
+            step="1"
+            value="3"
+        /></label>
+      </div>
+      <p
+        class="validation kernel-dialog-dimension-error"
+        id="kernelDialogDimensionError"
+        role="alert"
+      ></p>
+      <div class="kernel-table-scroll" id="kernelGrid"></div>
+      <p class="validation" id="kernelError" role="alert"></p>
+      <div class="kernel-dialog-footer">
+        <div class="kernel-dialog-actions">
+          <button id="normalizeKernel" class="secondary-button" type="button">
+            Normaliser</button
+          ><button id="identityKernel" class="text-button" type="button">
+            Identité
+          </button>
+        </div>
+        <span>Somme : <strong id="kernelSum">1</strong></span>
+        <button id="closeKernelDialog" class="file-button" type="button">
+          Fermer
+        </button>
+      </div>
+    </dialog>
+
+    <canvas id="sourceCanvas" hidden></canvas>
+    <script>
+      window.Module = {
+        onRuntimeInitialized() {
+          window.dispatchEvent(new Event("opencv-ready"));
+        },
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+    <script
+      type="module"
+      src="../../shared/components/course-header.js"
+    ></script>
+    <script type="module" src="./scripts/app.js"></script>
+  </body>
+</html>
