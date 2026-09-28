@@ -116,18 +116,28 @@ function pixelText(values) {
     : `R ${nice(values[0])} · V ${nice(values[1])} · B ${nice(values[2])}`;
 }
 function differenceText(source, result) {
-  return pixelText(result.map((value, index) => value - source[index]));
+  const comparableSource =
+    source.length === result.length
+      ? source
+      : source.length === 1
+        ? Array(result.length).fill(source[0])
+        : null;
+  return comparableSource
+    ? pixelText(result.map((value, index) => value - comparableSource[index]))
+    : "—";
 }
 
 export function createAnalysisView(ids) {
   let sourceStats = null,
     resultStats = null,
     mode = "RGB",
+    resultMode = "RGB",
     sourceVersion = 0,
     sourceKey = "";
   const redraw = () => {
     if (sourceStats) drawHistogram(ids.originalHistogram, sourceStats, mode);
-    if (resultStats) drawHistogram(ids.resultHistogram, resultStats, mode);
+    if (resultStats)
+      drawHistogram(ids.resultHistogram, resultStats, resultMode);
   };
   const clear = (canvas) =>
     canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
@@ -137,6 +147,7 @@ export function createAnalysisView(ids) {
   return {
     setSource(canvas, nextMode, { width, height, fileSize }) {
       mode = nextMode;
+      resultMode = nextMode;
       sourceVersion++;
       sourceKey = "";
       sourceStats = null;
@@ -164,12 +175,13 @@ export function createAnalysisView(ids) {
       ids.originalHistogramRange.textContent = rangeLabel(sourceStats);
       redraw();
     },
-    setResult(mat, range) {
-      resultStats = matHistogram(mat, mode, range);
+    setResult(mat, range, nextMode = mode) {
+      resultMode = nextMode;
+      resultStats = matHistogram(mat, resultMode, range);
       ids.resultHistogramRange.textContent = rangeLabel(resultStats);
       redraw();
     },
-    setCursor(x, y, sourceCanvas, resultMat) {
+    setCursor(x, y, sourceCanvas, resultMat, nextResultMode = resultMode) {
       if (!resultMat) return;
       const sourceData = sourceCanvas
         .getContext("2d")
@@ -181,6 +193,7 @@ export function createAnalysisView(ids) {
         channels = resultMat.channels(),
         base = (y * resultMat.cols + x) * channels,
         result = Array.from(resultMat.data32F.slice(base, base + channels));
+      resultMode = nextResultMode;
       ids.cursorPosition.textContent = `x : ${x} · y : ${y}`;
       ids.cursorOriginal.textContent = pixelText(source);
       ids.cursorResult.textContent = pixelText(result);
