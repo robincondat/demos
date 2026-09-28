@@ -25,3 +25,27 @@
 .contour-workbench > .validation:not(:empty) { margin:12px 0 0; }
 @media (max-width:1180px) { .contour-workbench { max-height:none; overflow:visible; } }
 @media (max-width:560px) { .result-view-label { align-items:flex-start; flex-direction:column; gap:5px; } .result-view-label select { width:100%; min-width:0; } .step-content { padding-left:3px; } }
+
+/* Alignement stable des deux visionneuses, même avec le sélecteur de résultat. */
+.comparison .panel-heading { min-height:58px; }
+
+/* Champs par paires : les deux colonnes occupent exactement la même largeur. */
+.step-content .inline-fields { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.step-content .inline-fields > .field { min-width:0; }
+
+.post-treatment-title,
+.kernel-preview h3 { margin:0 0 11px; color:var(--text); font-size:.8rem; letter-spacing:.055em; text-transform:uppercase; }
+.kernel-preview { margin-top:15px; padding-top:14px; border-top:1px solid var(--line); }
+#kernelPreviewContent { display:grid; gap:12px; }
+.kernel-preview figure { min-width:0; margin:0 0 12px; }
+.kernel-preview figcaption { margin-bottom:6px; color:var(--muted); font-size:.73rem; font-weight:750; }
+.kernel-preview-grid { display:grid; grid-template-columns:repeat(var(--kernel-size), minmax(35px, 1fr)); overflow:auto; border:1px solid #cbd6e3; border-radius:6px; background:#fff; }
+.kernel-preview-grid span { display:grid; place-items:center; min-width:35px; min-height:31px; padding:4px; border-right:1px solid #dbe3ec; border-bottom:1px solid #dbe3ec; color:#43536a; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:.67rem; font-variant-numeric:tabular-nums; }
+.kernel-preview-grid span:last-child { border-right:0; }
+.option-explanation { position:relative; margin:7px 0 13px; padding:9px 10px 9px 28px; border-radius:6px; background:#f5f8fb; color:var(--muted); font-size:.75rem; line-height:1.4; }
+.option-explanation::before { content:"i"; position:absolute; left:10px; top:9px; display:grid; place-items:center; width:13px; height:13px; border:1px solid var(--aqua); border-radius:50%; color:var(--aqua); font-size:.62rem; font-weight:900; }
+
+@media (max-width:560px) {
+  .comparison .panel-heading { min-height:82px; }
+  .step-content .inline-fields { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}

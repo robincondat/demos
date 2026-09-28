@@ -24,6 +24,138 @@ function gaussian(src, size, sigma) {
   return dst;
 }
 
+function outer(a, b) {
+  return a.flatMap((rowValue) =>
+    b.map((columnValue) => rowValue * columnValue),
+  );
+}
+
+function gaussianKernel(size, sigma) {
+  const radius = Math.floor(size / 2),
+    values = [];
+  let sum = 0;
+  for (let y = -radius; y <= radius; y++)
+    for (let x = -radius; x <= radius; x++) {
+      const value = Math.exp(-(x * x + y * y) / (2 * sigma * sigma));
+      values.push(value);
+      sum += value;
+    }
+  return values.map((value) => value / sum);
+}
+
+function laplacianKernel(size, connectivity) {
+  const radius = Math.floor(size / 2),
+    values = new Array(size * size).fill(0);
+  if (connectivity === 4) {
+    for (let offset = -radius; offset <= radius; offset++) {
+      if (offset === 0) continue;
+      values[radius * size + radius + offset] = 1;
+      values[(radius + offset) * size + radius] = 1;
+    }
+  } else {
+    values.fill(1);
+    values[radius * size + radius] = 0;
+  }
+  values[radius * size + radius] = -values.reduce((sum, value) => sum + value, 0);
+  return values;
+}
+
+export function kernelsFor(settings) {
+  if (settings.method === "sobel" || settings.method === "prewitt") {
+    const size = settings.derivativeSize,
+      sobel = {
+        3: { smooth: [1, 2, 1], derivative: [-1, 0, 1] },
+        5: { smooth: [1, 4, 6, 4, 1], derivative: [-1, -2, 0, 2, 1] },
+        7: {
+          smooth: [1, 6, 15, 20, 15, 6, 1],
+          derivative: [-1, -4, -5, 0, 5, 4, 1],
+        },
+      },
+      vectors =
+        settings.method === "sobel"
+          ? sobel[size]
+          : {
+              smooth: new Array(size).fill(1),
+              derivative: Array.from({ length: size }, (_, index) =>
+                index < Math.floor(size / 2)
+                  ? -1
+                  : index > Math.floor(size / 2)
+                    ? 1
+                    : 0,
+              ),
+            };
+    return [
+      {
+        label: "Dérivée X",
+        size,
+        values: outer(vectors.smooth, vectors.derivative),
+      },
+      {
+        label: "Dérivée Y",
+        size,
+        values: outer(vectors.derivative, vectors.smooth),
+      },
+    ];
+  }
+  if (settings.method === "laplacian")
+    return [
+      {
+        label: `Laplacien ${settings.laplacianConnectivity}-connexe`,
+        size: settings.laplacianSize,
+        values: laplacianKernel(
+          settings.laplacianSize,
+          settings.laplacianConnectivity,
+        ),
+      },
+    ];
+  if (settings.method === "dog") {
+    const first = gaussianKernel(settings.dogSize, settings.dogSigma1),
+      second = gaussianKernel(settings.dogSize, settings.dogSigma2);
+    return [
+      {
+        label: `Gaussien σ₁ = ${settings.dogSigma1}`,
+        size: settings.dogSize,
+        values: first,
+      },
+      {
+        label: `Gaussien σ₂ = ${settings.dogSigma2}`,
+        size: settings.dogSize,
+        values: second,
+      },
+      {
+        label: "Différence Gσ₁ − Gσ₂",
+        size: settings.dogSize,
+        values: first.map((value, index) => value - second[index]),
+      },
+    ];
+  }
+  return [];
+}
+
+function filterWithKernel(src, kernel) {
+  const kernelMat = cv.matFromArray(
+      kernel.size,
+      kernel.size,
+      cv.CV_32FC1,
+      kernel.values,
+    ),
+    dst = new cv.Mat();
+  try {
+    cv.filter2D(
+      src,
+      dst,
+      cv.CV_32F,
+      kernelMat,
+      new cv.Point(-1, -1),
+      0,
+      cv.BORDER_REFLECT_101,
+    );
+    return dst;
+  } finally {
+    kernelMat.delete();
+  }
+}
+
 function magnitudeAndOrientation(dx, dy) {
   const amplitude = new cv.Mat(), theta = new cv.Mat();
   cv.cartToPolar(dx, dy, amplitude, theta, false);
@@ -90,7 +222,7 @@ function drawDetectedContours(sourceRgb, binary, settings) {
   try {
     cv.findContours(mask, contours, hierarchy, RETRIEVAL[settings.retrievalMode](), APPROXIMATION[settings.approximationMode]());
     sourceRgb.convertTo(rgb8, cv.CV_8U);
-    if (settings.drawContours) cv.drawContours(rgb8, contours, -1, new cv.Scalar(255, 0, 0, 255), 2, cv.LINE_8, hierarchy, 100);
+    if (settings.drawContours) cv.drawContours(rgb8, contours, -1, new cv.Scalar(255, 0, 0, 255), 1, cv.LINE_8, hierarchy, 100);
     rgb8.convertTo(drawn, cv.CV_32F);
     return { image: drawn, count: contours.size() };
   } finally {
@@ -106,17 +238,9 @@ export function runPipeline(gray, sourceRgb, settings) {
     add("preprocessed", "Image prétraitée", smoothed.clone());
 
     if (settings.method === "sobel" || settings.method === "prewitt") {
-      dx = new cv.Mat(); dy = new cv.Mat();
-      if (settings.method === "sobel") {
-        cv.Sobel(smoothed, dx, cv.CV_32F, 1, 0, settings.derivativeSize, 1, 0, cv.BORDER_REFLECT_101);
-        cv.Sobel(smoothed, dy, cv.CV_32F, 0, 1, settings.derivativeSize, 1, 0, cv.BORDER_REFLECT_101);
-      } else {
-        const kx = cv.matFromArray(3, 3, cv.CV_32FC1, [-1,0,1,-1,0,1,-1,0,1]);
-        const ky = cv.matFromArray(3, 3, cv.CV_32FC1, [-1,-1,-1,0,0,0,1,1,1]);
-        cv.filter2D(smoothed, dx, cv.CV_32F, kx, new cv.Point(-1,-1), 0, cv.BORDER_REFLECT_101);
-        cv.filter2D(smoothed, dy, cv.CV_32F, ky, new cv.Point(-1,-1), 0, cv.BORDER_REFLECT_101);
-        kx.delete(); ky.delete();
-      }
+      const [kernelX, kernelY] = kernelsFor(settings);
+      dx = filterWithKernel(smoothed, kernelX);
+      dy = filterWithKernel(smoothed, kernelY);
       ({ amplitude, theta } = magnitudeAndOrientation(dx, dy));
       add("dx", "Dérivée directionnelle ∂I/∂x", dx.clone());
       add("dy", "Dérivée directionnelle ∂I/∂y", dy.clone());
@@ -124,12 +248,13 @@ export function runPipeline(gray, sourceRgb, settings) {
       add("orientation", "Orientation du gradient", orientationRgb(amplitude, theta), "RGB");
       binary = thresholdAmplitude(amplitude, settings.gradientThreshold);
     } else if (settings.method === "laplacian") {
-      response = new cv.Mat();
-      cv.Laplacian(smoothed, response, cv.CV_32F, settings.laplacianSize, 1, 0, cv.BORDER_REFLECT_101);
+      response = filterWithKernel(smoothed, kernelsFor(settings)[0]);
       add("response", "Réponse du Laplacien", response.clone());
       binary = settings.zeroCrossingMode === "simple" ? zeroCrossingSimple(response, settings.zeroThresholdMin, settings.zeroThresholdMax, settings.zeroThresholdDifference) : zeroCrossingAdvanced(response, settings.zeroThresholdDifference);
     } else if (settings.method === "dog") {
-      const first = gaussian(smoothed, settings.gaussianSize, settings.dogSigma1), second = gaussian(smoothed, settings.gaussianSize, settings.dogSigma2);
+      const [kernelFirst, kernelSecond] = kernelsFor(settings),
+        first = filterWithKernel(smoothed, kernelFirst),
+        second = filterWithKernel(smoothed, kernelSecond);
       response = new cv.Mat(); cv.subtract(first, second, response); first.delete(); second.delete();
       add("response", "Réponse de la DoG", response.clone());
       binary = settings.zeroCrossingMode === "simple" ? zeroCrossingSimple(response, settings.zeroThresholdMin, settings.zeroThresholdMax, settings.zeroThresholdDifference) : zeroCrossingAdvanced(response, settings.zeroThresholdDifference);

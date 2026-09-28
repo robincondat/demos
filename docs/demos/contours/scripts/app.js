@@ -1,7 +1,7 @@
 import { drawFileToCanvas } from "../../../shared/scripts/image-loaders.js";
 import { createSyncedViewer } from "../../../shared/scripts/viewer.js";
 import { createAnalysisView } from "../../../shared/scripts/analysis.js";
-import { runPipeline, deletePipeline } from "./processing.js";
+import { runPipeline, deletePipeline, kernelsFor } from "./processing.js";
 import { byId, collectElements } from "./ui.js";
 
 let cvReady = false, imageReady = false, workingMode = "RGB", timer = null, pipeline = null, lastResult = null;
@@ -51,7 +51,7 @@ function renderOriginal() {
   finally { gray.delete(); rgb.delete(); display?.delete(); }
 }
 function settings() { return {
-  gaussianEnabled: els.gaussianEnabled.checked, gaussianSize: integer(els.gaussianSize, 5), gaussianSigma: Math.max(0, number(els.gaussianSigma, 1.4)), method: els.method.value, derivativeSize: integer(els.derivativeSize, 3), laplacianSize: integer(els.laplacianSize, 3), dogSigma1: Math.max(.1, number(els.dogSigma1, 1)), dogSigma2: Math.max(.1, number(els.dogSigma2, 2)), gradientThreshold: integer(els.gradientThreshold, 80), zeroCrossingMode: els.zeroCrossingMode.value, zeroThresholdDifference: Math.max(0, number(els.zeroThresholdDifference, 20)), zeroThresholdMin: number(els.zeroThresholdMin), zeroThresholdMax: number(els.zeroThresholdMax), cannyLow: integer(els.cannyLow, 50), cannyHigh: integer(els.cannyHigh, 150), cannyAperture: integer(els.cannyAperture, 3), cannyL2: els.cannyL2.checked, retrievalMode: els.retrievalMode.value, approximationMode: els.approximationMode.value, drawContours: els.drawContours.checked
+  gaussianEnabled: els.gaussianEnabled.checked, gaussianSize: integer(els.gaussianSize, 5), gaussianSigma: Math.max(0, number(els.gaussianSigma, 1.4)), method: els.method.value, derivativeSize: integer(els.derivativeSize, 3), laplacianSize: integer(els.laplacianSize, 3), laplacianConnectivity: integer(els.laplacianConnectivity, 4), dogSize: integer(els.dogSize, 5), dogSigma1: Math.max(.1, number(els.dogSigma1, 1)), dogSigma2: Math.max(.1, number(els.dogSigma2, 2)), gradientThreshold: integer(els.gradientThreshold, 80), zeroCrossingMode: els.zeroCrossingMode.value, zeroThresholdDifference: Math.max(0, number(els.zeroThresholdDifference, 20)), zeroThresholdMin: number(els.zeroThresholdMin), zeroThresholdMax: number(els.zeroThresholdMax), cannyLow: integer(els.cannyLow, 50), cannyHigh: integer(els.cannyHigh, 150), cannyAperture: integer(els.cannyAperture, 3), cannyL2: els.cannyL2.checked, retrievalMode: els.retrievalMode.value, approximationMode: els.approximationMode.value, drawContours: els.drawContours.checked
 }; }
 function validate(s) {
   let error = "";
@@ -62,13 +62,47 @@ function validate(s) {
 }
 function updateMethodInterface() {
   const method = els.method.value, first = method === "sobel" || method === "prewitt", second = method === "laplacian" || method === "dog";
-  els.firstOrderSettings.hidden = !first; els.derivativeSize.disabled = method === "prewitt"; if (method === "prewitt") els.derivativeSize.value = "3";
+  els.firstOrderSettings.hidden = !first;
   els.laplacianSettings.hidden = method !== "laplacian"; els.dogSettings.hidden = method !== "dog"; els.cannySettings.hidden = method !== "canny";
   els.thresholdSettings.hidden = !first; els.zeroCrossingSettings.hidden = !second; els.cannyThresholdSettings.hidden = method !== "canny";
-  els.postSubtitle.textContent = first ? "Normalisation et seuillage" : second ? "Détection des passages par zéro" : "Double seuillage et hystérésis";
-  updateZeroInterface(); schedule();
+  els.postTreatmentTitle.textContent = first ? "Normalisation et seuillage" : second ? "Détection des passages par zéro" : "Double seuillage et hystérésis";
+  updateKernelPreview(); updateZeroInterface(); schedule();
 }
 function updateZeroInterface() { els.simpleZeroSettings.hidden = els.zeroCrossingMode.value !== "simple"; }
+function formatKernelValue(value) {
+  if (Math.abs(value) < 1e-10) return "0";
+  if (Number.isInteger(value)) return String(value);
+  return Number(value.toPrecision(3)).toString();
+}
+function updateKernelPreview() {
+  const kernels = kernelsFor(settings());
+  els.kernelPreview.hidden = kernels.length === 0;
+  els.kernelPreviewContent.replaceChildren(...kernels.map((kernel) => {
+    const figure = document.createElement("figure"), caption = document.createElement("figcaption"), grid = document.createElement("div");
+    caption.textContent = kernel.label;
+    grid.className = "kernel-preview-grid";
+    grid.style.setProperty("--kernel-size", kernel.size);
+    grid.append(...kernel.values.map((value) => { const cell = document.createElement("span"); cell.textContent = formatKernelValue(value); cell.title = String(value); return cell; }));
+    figure.append(caption, grid);
+    return figure;
+  }));
+}
+const retrievalDescriptions = {
+  external: "Conserve uniquement les contours extérieurs. Les contours imbriqués sont ignorés.",
+  list: "Conserve tous les contours sans reconstruire leurs relations parent-enfant.",
+  ccomp: "Organise les contours sur deux niveaux : contours extérieurs puis trous.",
+  tree: "Reconstruit toute la hiérarchie des contours imbriqués.",
+};
+const approximationDescriptions = {
+  simple: "Compresse les segments droits en ne gardant que leurs extrémités. Recommandé dans la plupart des cas.",
+  none: "Conserve chaque pixel du contour : résultat plus détaillé mais plus volumineux.",
+  tc89l1: "Réduit les points avec l’algorithme de Teh–Chin et la mesure L1.",
+  tc89kcos: "Réduit les points avec Teh–Chin en privilégiant la courbure du contour.",
+};
+function updateContourExplanations() {
+  els.retrievalExplanation.textContent = retrievalDescriptions[els.retrievalMode.value];
+  els.approximationExplanation.textContent = approximationDescriptions[els.approximationMode.value];
+}
 function updateResultOptions() {
   const previous = els.resultView.value, options = [...pipeline.images.values()];
   els.resultView.replaceChildren(...options.map(({ key, label }) => { const option = document.createElement("option"); option.value = key; option.textContent = label; return option; }));
@@ -95,15 +129,16 @@ async function drawImage(file) {
   catch (error) { els.imageMeta.textContent = error.message; els.timing.textContent = "Chargement impossible"; console.error(error); }
 }
 function reset() {
-  Object.assign(els.gaussianEnabled, { checked: true }); els.gaussianSize.value = 5; els.gaussianSigma.value = 1.4; els.method.value = "sobel"; els.derivativeSize.value = 3; els.laplacianSize.value = 3; els.dogSigma1.value = 1; els.dogSigma2.value = 2; els.gradientThreshold.value = 80; els.zeroCrossingMode.value = "simple"; els.zeroThresholdDifference.value = 20; els.zeroThresholdMin.value = 0; els.zeroThresholdMax.value = 0; els.cannyLow.value = 50; els.cannyHigh.value = 150; els.cannyAperture.value = 3; els.cannyL2.checked = true; els.retrievalMode.value = "external"; els.approximationMode.value = "simple"; els.drawContours.checked = true; els.originalDisplayMin.value = 0; els.originalDisplayMax.value = 255; els.resultDisplayMin.value = 0; els.resultDisplayMax.value = 255; els.originalAutoRange.checked = false; els.resultAutoRange.checked = true; els.gaussianSettings.hidden = false; els.gradientThresholdValue.value = 80; updateMethodInterface(); renderOriginal();
+  Object.assign(els.gaussianEnabled, { checked: true }); els.gaussianSize.value = 5; els.gaussianSigma.value = 1.4; els.method.value = "sobel"; els.derivativeSize.value = 3; els.laplacianSize.value = 3; els.laplacianConnectivity.value = 4; els.dogSize.value = 5; els.dogSigma1.value = 1; els.dogSigma2.value = 2; els.gradientThreshold.value = 80; els.zeroCrossingMode.value = "simple"; els.zeroThresholdDifference.value = 20; els.zeroThresholdMin.value = 0; els.zeroThresholdMax.value = 0; els.cannyLow.value = 50; els.cannyHigh.value = 150; els.cannyAperture.value = 3; els.cannyL2.checked = true; els.retrievalMode.value = "external"; els.approximationMode.value = "simple"; els.drawContours.checked = true; els.originalDisplayMin.value = 0; els.originalDisplayMax.value = 255; els.resultDisplayMin.value = 0; els.resultDisplayMax.value = 255; els.originalAutoRange.checked = false; els.resultAutoRange.checked = true; els.gaussianSettings.hidden = false; els.gradientThresholdValue.value = 80; updateMethodInterface(); renderOriginal();
 }
 window.addEventListener("opencv-ready", () => { cvReady = true; byId("runtimeDot").parentElement.classList.add("ready"); els.runtimeText.textContent = "OpenCV prêt"; renderOriginal(); schedule(); });
 if (window.cv?.Mat) { cvReady = true; byId("runtimeDot").parentElement.classList.add("ready"); els.runtimeText.textContent = "OpenCV prêt"; }
 els.imageInput.addEventListener("change", (event) => { const [file] = event.target.files; if (file) drawImage(file); });
 els.method.addEventListener("change", updateMethodInterface); els.zeroCrossingMode.addEventListener("change", () => { updateZeroInterface(); schedule(); }); els.gaussianEnabled.addEventListener("change", () => { els.gaussianSettings.hidden = !els.gaussianEnabled.checked; schedule(); }); els.gradientThreshold.addEventListener("input", () => { els.gradientThresholdValue.value = els.gradientThreshold.value; schedule(); });
-document.querySelectorAll(".contour-workbench input, .contour-workbench select").forEach((control) => { if (![els.method, els.zeroCrossingMode, els.gaussianEnabled, els.gradientThreshold].includes(control)) control.addEventListener("input", schedule); });
+document.querySelectorAll(".contour-workbench input, .contour-workbench select").forEach((control) => { if (![els.method, els.zeroCrossingMode, els.gaussianEnabled, els.gradientThreshold].includes(control)) control.addEventListener("input", () => { updateKernelPreview(); updateContourExplanations(); schedule(); }); });
+document.querySelectorAll(".pipeline-step").forEach((section) => section.addEventListener("toggle", () => { if (!section.open) return; document.querySelectorAll(".pipeline-step").forEach((other) => { if (other !== section) other.open = false; }); }));
 els.resultView.addEventListener("change", renderSelected); byId("resetButton").addEventListener("click", reset);
 [els.originalDisplayMin, els.originalDisplayMax].forEach((input) => input.addEventListener("input", renderOriginal)); [els.resultDisplayMin, els.resultDisplayMax].forEach((input) => input.addEventListener("input", renderSelected)); els.originalAutoRange.addEventListener("change", renderOriginal); els.resultAutoRange.addEventListener("change", renderSelected);
 els.downloadButton.addEventListener("click", () => els.resultCanvas.toBlob((blob) => { const link = document.createElement("a"), url = URL.createObjectURL(blob); link.href = url; link.download = `contours-${els.resultView.value}.png`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }, "image/png"));
 for (const stage of [els.originalStage, els.resultStage]) { stage.addEventListener("pointermove", (event) => { if (!imageReady || !lastResult) return; const point = viewer.toImagePoint(stage, event.clientX, event.clientY); if (point) analysis.setCursor(point.x, point.y, els.sourceCanvas, lastResult.mat, lastResult.mode); else analysis.clearCursor(); }); stage.addEventListener("pointerleave", () => analysis.clearCursor()); }
-displayRange("original"); displayRange("result"); updateMethodInterface();
+displayRange("original"); displayRange("result"); updateContourExplanations(); updateMethodInterface();

@@ -275,10 +275,10 @@
 
         <!-- Choix du filtre et paramètres associés -->
         <aside class="workbench contour-workbench" aria-label="Chaîne de traitement des contours">
-          <div class="section-title"><div><p class="eyebrow">CHAÎNE DE TRAITEMENT</p><h2>Extraction de contours</h2><p>Configurez chaque étape, de l’image source au tracé final.</p></div></div>
+          <div class="section-title"><div><p class="eyebrow">CHAÎNE DE TRAITEMENT</p><h2>Extraction de contours</h2></div></div>
 
-          <details class="pipeline-step" open>
-            <summary><span class="step-number">1</span><span><b>Prétraitement</b><small>Lissage avant dérivation</small></span></summary>
+          <details class="pipeline-step">
+            <summary><span class="step-number">1</span><span><b>Prétraitement</b></span></summary>
             <div class="step-content">
               <label class="check"><input id="gaussianEnabled" type="checkbox" checked /><span>Activer le lissage gaussien</span></label>
               <div id="gaussianSettings" class="control-stack">
@@ -288,29 +288,31 @@
             </div>
           </details>
 
-          <details class="pipeline-step" open>
-            <summary><span class="step-number">2</span><span><b>Extraction des gradients</b><small>Opérateur et paramètres</small></span></summary>
+          <details class="pipeline-step">
+            <summary><span class="step-number">2</span><span><b>Extraction des gradients</b></span></summary>
             <div class="step-content">
               <label class="field full"><span>Méthode</span><select id="method"><option value="sobel">Sobel</option><option value="prewitt">Prewitt</option><option value="laplacian">Laplacien</option><option value="dog">DoG — Difference of Gaussians</option><option value="canny">Canny</option></select></label>
               <div id="firstOrderSettings" class="method-settings">
-                <label class="field full"><span>Taille du noyau</span><select id="derivativeSize"><option value="3">3 × 3</option><option value="5">5 × 5 (Sobel)</option><option value="7">7 × 7 (Sobel)</option></select></label>
+                <label class="field full"><span>Taille du noyau</span><select id="derivativeSize"><option value="3">3 × 3</option><option value="5">5 × 5</option><option value="7">7 × 7</option></select></label>
               </div>
               <div id="laplacianSettings" class="method-settings" hidden>
-                <label class="field full"><span>Taille du noyau</span><select id="laplacianSize"><option value="1">1 × 1</option><option value="3" selected>3 × 3</option><option value="5">5 × 5</option><option value="7">7 × 7</option></select></label>
+                <label class="field full"><span>Taille du noyau</span><select id="laplacianSize"><option value="3">3 × 3</option><option value="5">5 × 5</option><option value="7">7 × 7</option></select></label><label class="field full"><span>Voisinage</span><select id="laplacianConnectivity"><option value="4">4-connexe</option><option value="8">8-connexe</option></select></label>
               </div>
               <div id="dogSettings" class="method-settings" hidden>
-                <div class="inline-fields"><label class="field"><span>σ₁</span><input id="dogSigma1" type="number" min="0.1" max="20" step="0.1" value="1" /></label><label class="field"><span>σ₂</span><input id="dogSigma2" type="number" min="0.1" max="20" step="0.1" value="2" /></label></div>
+                <label class="field full"><span>Taille des noyaux gaussiens</span><select id="dogSize"><option value="3">3 × 3</option><option value="5" selected>5 × 5</option><option value="7">7 × 7</option></select></label><div class="inline-fields"><label class="field"><span>σ₁</span><input id="dogSigma1" type="number" min="0.1" max="20" step="0.1" value="1" /></label><label class="field"><span>σ₂</span><input id="dogSigma2" type="number" min="0.1" max="20" step="0.1" value="2" /></label></div>
               </div>
               <div id="cannySettings" class="method-settings" hidden>
                 <label class="field full"><span>Taille Sobel</span><select id="cannyAperture"><option value="3">3 × 3</option><option value="5">5 × 5</option><option value="7">7 × 7</option></select></label>
                 <label class="check"><input id="cannyL2" type="checkbox" checked /><span>Norme L2 du gradient</span></label>
               </div>
+              <section id="kernelPreview" class="kernel-preview" aria-live="polite"><h3>Noyaux appliqués</h3><div id="kernelPreviewContent"></div></section>
             </div>
           </details>
 
-          <details class="pipeline-step" open>
-            <summary><span class="step-number">3</span><span><b>Post-traitement</b><small id="postSubtitle">Normalisation et seuillage</small></span></summary>
+          <details class="pipeline-step">
+            <summary><span class="step-number">3</span><span><b>Post-traitement</b></span></summary>
             <div class="step-content">
+              <h3 class="post-treatment-title" id="postTreatmentTitle">Normalisation et seuillage</h3>
               <div id="thresholdSettings"><label class="field full"><span>Seuil de l’amplitude normalisée</span><div class="range-control"><input id="gradientThreshold" type="range" min="0" max="255" value="80" /><output id="gradientThresholdValue">80</output></div></label></div>
               <div id="zeroCrossingSettings" hidden>
                 <label class="field full"><span>Détection</span><select id="zeroCrossingMode"><option value="simple">Fenêtre 3 × 3 simplifiée</option><option value="advanced">Paires opposées avancée</option></select></label>
@@ -321,11 +323,13 @@
             </div>
           </details>
 
-          <details class="pipeline-step" open>
-            <summary><span class="step-number">4</span><span><b>Détection des contours</b><small>Regroupement et tracé</small></span></summary>
+          <details class="pipeline-step">
+            <summary><span class="step-number">4</span><span><b>Détection des contours</b></span></summary>
             <div class="step-content">
               <label class="field full"><span>Mode de récupération</span><select id="retrievalMode"><option value="external">RETR_EXTERNAL</option><option value="list">RETR_LIST</option><option value="ccomp">RETR_CCOMP</option><option value="tree">RETR_TREE</option></select></label>
+              <p class="option-explanation" id="retrievalExplanation"></p>
               <label class="field full"><span>Approximation</span><select id="approximationMode"><option value="simple">CHAIN_APPROX_SIMPLE</option><option value="none">CHAIN_APPROX_NONE</option><option value="tc89l1">CHAIN_APPROX_TC89_L1</option><option value="tc89kcos">CHAIN_APPROX_TC89_KCOS</option></select></label>
+              <p class="option-explanation" id="approximationExplanation"></p>
               <label class="check"><input id="drawContours" type="checkbox" checked /><span>Dessiner les contours en rouge</span></label>
               <p class="contour-count" id="contourCount">Chargez une image pour détecter les contours.</p>
             </div>
