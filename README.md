@@ -1,6 +1,6 @@
 # Démonstrateurs TIM
 
-Application web statique basée sur OpenCV.js. Elle permet de charger une image locale, de comparer l’original au résultat, puis d’explorer les filtres moyenneur, médian, gaussien et une convolution personnalisée.
+Applications web statiques basées sur OpenCV.js. Elles permettent de charger une image locale et d’explorer le filtrage, l’extraction de contours et la transformée de Fourier de signaux.
 
 Formats acceptés : JPEG, PNG, WebP, BMP, TIFF/TIF, PBM, PGM et PPM. Les TIFF multipages sont ouverts sur leur première page. Les formats TIFF et Netpbm sont décodés dans un canevas intermédiaire avant leur conversion vers le format de travail.
 
@@ -16,8 +16,9 @@ Pour la convolution personnalisée, la taille du noyau et ses coefficients sont 
 
 Servez le dossier `dist` avec un serveur HTTP local, puis ouvrez
 `demos/filtrage/`. La racine redirige actuellement vers cette première
-démonstration. Une connexion Internet est nécessaire au premier chargement pour
-récupérer OpenCV.js depuis la documentation officielle.
+démonstration. Le démonstrateur `demos/contours/` présente les opérateurs de
+gradient, les passages par zéro, Canny et le tracé des contours. Une connexion Internet est nécessaire au premier chargement pour
+récupérer OpenCV.js depuis la documentation officielle. Le démonstrateur `demos/fourier/` permet de composer ou charger des signaux puis d’explorer leurs spectres FFT et RFFT.
 
 ## Déploiement
 
