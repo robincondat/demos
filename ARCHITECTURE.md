@@ -21,10 +21,10 @@ Une variante peut surcharger les styles communs dans sa propre feuille CSS.
 
 ## Ajouter un démonstrateur
 
-Créer un dossier à côté de `filtrage` :
+Créer un dossier dans le répertoire du cours concerné (`tim/`, `tds/` ou `auto/`) :
 
 ```text
-dist/demos/nom-demo/
+docs/tim/nom-demo/
 ├── index.html
 ├── styles/
 │   └── nom-demo.css

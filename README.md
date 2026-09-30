@@ -1,6 +1,6 @@
 # Démonstrateurs TIM
 
-Applications web statiques basées sur OpenCV.js. Elles permettent de charger une image locale et d’explorer le filtrage, l’extraction de contours et la transformée de Fourier de signaux.
+Applications web statiques pédagogiques consacrées au traitement d’images, au traitement du signal et, à terme, à l’automatique. Les démonstrateurs d’images utilisent OpenCV.js ; la plateforme Fourier exécute ses calculs scientifiques avec NumPy dans Pyodide.
 
 Formats acceptés : JPEG, PNG, WebP, BMP, TIFF/TIF, PBM, PGM et PPM. Les TIFF multipages sont ouverts sur leur première page. Les formats TIFF et Netpbm sont décodés dans un canevas intermédiaire avant leur conversion vers le format de travail.
 
@@ -14,43 +14,28 @@ Pour la convolution personnalisée, la taille du noyau et ses coefficients sont 
 
 ## Utilisation locale
 
-Servez le dossier `dist` avec un serveur HTTP local, puis ouvrez
-`demos/filtrage/`. La racine redirige actuellement vers cette première
-démonstration. Le démonstrateur `demos/contours/` présente les opérateurs de
+Servez le dossier `docs` avec un serveur HTTP local, puis ouvrez
+`tim/filtrage/`. La racine redirige actuellement vers cette première
+démonstration. Le démonstrateur `tim/contours/` présente les opérateurs de
 gradient, les passages par zéro, Canny et le tracé des contours. Une connexion Internet est nécessaire au premier chargement pour
-récupérer OpenCV.js depuis la documentation officielle. Le démonstrateur `demos/fourier/` permet de composer ou charger des signaux puis d’explorer leurs spectres FFT et RFFT.
+récupérer OpenCV.js depuis la documentation officielle. Le démonstrateur `tds/fourier/` permet de composer ou charger des signaux puis d’explorer leurs spectres FFT et RFFT.
 
 ## Déploiement
 
-Le contenu de `dist` peut être publié tel quel sur GitHub Pages ou Vercel.
+Le contenu de `docs` peut être publié tel quel sur GitHub Pages ou Vercel.
 
 ## Organisation du code
 
 ```text
-dist/
+docs/
 ├── index.html
-├── shared/
-│   ├── components/
-│   │   └── course-header.js
-│   ├── styles/
-│   │   ├── base.css
-│   │   ├── course-header.css
-│   │   ├── image-viewer.css
-│   │   └── theme.css
-│   └── scripts/
-│       ├── image-loaders.js
-│       ├── viewer.js
-│       └── analysis.js
-└── demos/
-    └── filtrage/
-        ├── index.html
-        ├── styles/
-        │   └── filtrage.css
-        └── scripts/
-            ├── app.js
-            ├── ui.js
-            ├── filters.js
-            └── kernel.js
+├── shared/                  # Composants, styles et scripts communs
+├── tim/                     # Traitement d’images
+│   ├── filtrage/
+│   └── contours/
+├── tds/                     # Traitement du signal
+│   └── fourier/
+└── auto/                    # Automatique (démonstrateurs à venir)
 ```
 
 Le fichier [PERSONNALISATION.md](PERSONNALISATION.md) indique précisément où

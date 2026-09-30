@@ -60,3 +60,17 @@ main { padding-top:14px; }
 @media (max-width:1100px) { .signal-layout { grid-template-columns:1fr; } .signal-workbench { position:static; max-height:none; } }
 @media (max-width:760px) { .spectra-grid { grid-template-columns:1fr; } .chart-stage, .spectrum-stage { height:300px; } }
 @media (max-width:520px) { .two-fields { grid-template-columns:1fr; } .chart-heading { align-items:flex-start; flex-direction:column; gap:3px; } .chart-heading > span { text-align:left; } }
+.python-status { display:flex; align-items:center; gap:7px; margin:7px 0 0; color:var(--signal-green); font-size:.72rem; font-weight:700; }
+.python-status::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+.signal-card { padding:0; }
+.signal-card > summary { display:grid; grid-template-columns:auto minmax(0, 1fr) auto; align-items:center; gap:8px; padding:11px; cursor:pointer; list-style:none; }
+.signal-card > summary::-webkit-details-marker { display:none; }
+.signal-card > summary::after { content:"⌄"; color:var(--muted); grid-column:4; }
+.signal-card:not([open]) > summary::after { transform:rotate(-90deg); }
+.signal-color { width:9px; height:9px; border-radius:50%; background:var(--signal-color); }
+.signal-card > summary strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.82rem; }
+.signal-card > summary span { display:grid; place-items:center; min-width:31px; height:22px; padding:0 6px; border-radius:11px; background:#eaf6f2; color:#0f7256; font-size:.68rem; font-weight:850; }
+.signal-card-content { padding:0 11px 11px; border-top:1px solid var(--line); }
+.signal-card-content .signal-card-heading { padding-top:10px; }
+.signal-card .common-fields { margin-top:9px; }
+.operation-field select:disabled { opacity:.65; cursor:not-allowed; }
