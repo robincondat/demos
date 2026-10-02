@@ -36,8 +36,8 @@
         <section class="workbench-section">
           <div class="section-heading"><p class="eyebrow">ÉCHANTILLONNAGE</p><h2>Grille temporelle</h2></div>
           <div class="two-fields">
-            <label class="field"><span>Temps d’échantillonnage</span><div class="input-unit"><input id="samplePeriod" type="number" min="0.001" step="0.01" value="1" /><span>ms</span></div></label>
-            <label class="field"><span>Durée</span><div class="input-unit"><input id="duration" type="number" min="0.01" step="0.1" value="1" /><span>s</span></div></label>
+            <label class="field"><span>Temps d’échantillonnage</span><div class="input-unit"><input id="samplePeriod" type="number" min="0.000001" step="0.01" value="1" /><span>ms</span></div></label>
+            <label class="field"><span>Fréquence d’échantillonnage</span><div class="input-unit"><input id="sampleRate" type="number" min="0.001" step="1" value="1000" /><span>Hz</span></div></label>
           </div>
           <p class="sampling-info" id="samplingInfo">—</p><p class="python-status" id="pythonStatus">Initialisation du moteur scientifique Python…</p>
         </section>
@@ -46,8 +46,6 @@
           <div class="section-heading"><p class="eyebrow">COMPOSITION</p><h2>Signaux</h2></div>
           <div class="signal-list" id="signalList"></div>
           <button class="secondary-button add-signal" id="addSignal" type="button">+ Ajouter une composante</button>
-          <label class="file-button wav-button" for="wavInput">Charger un fichier WAV</label>
-          <input id="wavInput" type="file" accept=".wav,audio/wav,audio/x-wav" />
           <p class="validation" id="signalError" role="alert"></p>
         </section>
 
@@ -62,14 +60,27 @@
   </main>
   <template id="signalTemplate">
     <details class="signal-card">
-      <summary><i class="signal-color"></i><strong data-summary-name>Signal</strong><span data-summary-operation></span></summary>
+      <summary>
+        <i class="signal-color"></i><strong data-summary-name>Signal</strong><span class="signal-code" data-summary-code>S1</span>
+        <label class="visibility-toggle" title="Afficher ce signal"><input data-field="visible" type="checkbox" checked /><span>Afficher</span></label>
+      </summary>
       <div class="signal-card-content">
-      <div class="signal-card-heading"><label class="field signal-name"><span>Nom</span><input data-field="name" type="text" /></label><button class="remove-signal" type="button" aria-label="Supprimer ce signal">×</button></div>
-      <label class="field full operation-field"><span>Combinaison</span><select data-field="operation"><option value="add">Additionner</option><option value="multiply">Multiplier</option></select></label>
-      <label class="field full"><span>Forme</span><select data-field="type"><option value="sine">Sinus</option><option value="cosine">Cosinus</option><option value="square">Carré</option><option value="triangle">Triangulaire</option><option value="gate">Porte</option><option value="step">Échelon</option></select></label>
-      <div class="two-fields periodic-fields"><label class="field"><span>Fréquence</span><div class="input-unit"><input data-field="frequency" type="number" min="0" step="0.1" value="10" /><span>Hz</span></div></label><label class="field"><span>Retard / avance</span><div class="input-unit"><input data-field="delay" type="number" step="0.01" value="0" /><span>s</span></div></label></div>
-      <div class="two-fields common-fields"><label class="field"><span>Amplitude</span><input data-field="amplitude" type="number" step="0.1" value="1" /></label><label class="field"><span>Offset</span><input data-field="offset" type="number" step="0.1" value="0" /></label></div>
-      <div class="two-fields timing-fields" hidden><label class="field"><span>Début</span><div class="input-unit"><input data-field="start" type="number" min="0" step="0.01" value="0.25" /><span>s</span></div></label><label class="field gate-end"><span>Fin</span><div class="input-unit"><input data-field="end" type="number" min="0" step="0.01" value="0.75" /><span>s</span></div></label></div>
+        <div class="signal-card-heading"><label class="field signal-name"><span>Nom</span><input data-field="name" type="text" /></label><button class="remove-signal" type="button" aria-label="Supprimer ce signal">×</button></div>
+        <label class="field full"><span>Définition</span><select data-field="definition"><option value="function">Fonction usuelle</option><option value="wav">Fichier WAV</option><option value="combination">Combinaison de signaux</option></select></label>
+        <div class="definition-panel function-definition">
+          <label class="field full"><span>Forme</span><select data-field="type"><option value="sine">Sinus</option><option value="cosine">Cosinus</option><option value="square">Carré</option><option value="triangle">Triangulaire</option><option value="gate">Porte</option><option value="step">Échelon</option></select></label>
+          <div class="two-fields periodic-fields"><label class="field"><span>Fréquence</span><div class="input-unit"><input data-field="frequency" type="number" min="0" step="0.1" value="10" /><span>Hz</span></div></label><label class="field"><span>Retard / avance</span><div class="input-unit"><input data-field="delay" type="number" step="0.01" value="0" /><span>s</span></div></label></div>
+          <div class="two-fields common-fields"><label class="field"><span>Amplitude</span><input data-field="amplitude" type="number" step="0.1" value="1" /></label><label class="field"><span>Offset</span><input data-field="offset" type="number" step="0.1" value="0" /></label></div>
+        </div>
+        <div class="definition-panel wav-definition" hidden>
+          <label class="wav-drop"><input data-field="wavFile" type="file" accept=".wav,audio/wav,audio/x-wav" /><strong>Choisir un fichier WAV</strong><span data-wav-name>Aucun fichier chargé</span></label>
+          <div class="two-fields common-fields"><label class="field"><span>Amplitude</span><input data-field="wavAmplitude" type="number" step="0.1" value="1" /></label><label class="field"><span>Offset</span><input data-field="wavOffset" type="number" step="0.1" value="0" /></label></div>
+        </div>
+        <div class="definition-panel combination-definition" hidden>
+          <label class="field full"><span>Expression</span><input data-field="expression" type="text" placeholder="S1 + S2 * S3" /></label>
+          <p class="expression-help" data-expression-help>Utilisez les signaux précédents avec +, −, * et des parenthèses.</p>
+        </div>
+        <div class="two-fields interval-fields"><label class="field"><span>Début du signal</span><div class="input-unit"><input data-field="start" type="number" step="0.01" value="0" /><span>s</span></div></label><label class="field"><span>Fin du signal</span><div class="input-unit"><input data-field="end" type="number" step="0.01" value="1" /><span>s</span></div></label></div>
       </div>
     </details>
   </template>

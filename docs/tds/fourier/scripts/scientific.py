@@ -1,48 +1,76 @@
+import ast
 import numpy as np
 
 PERIODIC_TYPES = {"sine", "cosine", "square", "triangle"}
 
-def _component(signal, times):
+def _function(signal, times):
+    amplitude, offset = float(signal.get("amplitude", 1)), float(signal.get("offset", 0))
     kind = signal["type"]
-    amplitude = float(signal.get("amplitude", 1))
-    offset = float(signal.get("offset", 0))
-    if kind == "wav":
-        source = np.asarray(signal["samples"], dtype=np.float64)
-        source_times = np.arange(source.size, dtype=np.float64) / float(signal["sampleRate"])
-        return amplitude * np.interp(times, source_times, source, left=0, right=0) + offset
     if kind in PERIODIC_TYPES:
-        shifted = times - float(signal.get("delay", 0))
-        phase = 2 * np.pi * float(signal.get("frequency", 0)) * shifted
+        phase = 2 * np.pi * float(signal.get("frequency", 0)) * (times - float(signal.get("delay", 0)))
         if kind == "sine": values = np.sin(phase)
         elif kind == "cosine": values = np.cos(phase)
         elif kind == "square": values = np.where(np.sin(phase) >= 0, 1.0, -1.0)
         else: values = (2 / np.pi) * np.arcsin(np.sin(phase))
-        return amplitude * values + offset
-    start = float(signal.get("start", 0))
-    if kind == "gate": values = (times >= start) & (times < float(signal.get("end", start)))
-    else: values = times >= start
-    return amplitude * values.astype(np.float64) + offset
+    elif kind == "gate": values = np.ones(times.size)
+    else: values = (times >= 0).astype(np.float64)
+    return amplitude * values + offset
+
+def _wav(signal, times):
+    source = np.asarray(signal.get("samples", []), dtype=np.float64)
+    if not source.size: return np.zeros(times.size)
+    local_times = times - float(signal["start"])
+    source_times = np.arange(source.size, dtype=np.float64) / float(signal["sampleRate"])
+    return float(signal.get("amplitude", 1)) * np.interp(local_times, source_times, source, left=0, right=0) + float(signal.get("offset", 0))
+
+def _expression(expression, environment):
+    tree = ast.parse(expression, mode="eval")
+    def visit(node):
+        if isinstance(node, ast.Expression): return visit(node.body)
+        if isinstance(node, ast.Name):
+            if node.id not in environment: raise ValueError(f"Signal inconnu ou non précédent : {node.id}")
+            return environment[node.id]
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)): return float(node.value)
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+            value = visit(node.operand); return value if isinstance(node.op, ast.UAdd) else -value
+        if isinstance(node, ast.BinOp) and isinstance(node.op, (ast.Add, ast.Sub, ast.Mult)):
+            left, right = visit(node.left), visit(node.right)
+            return left + right if isinstance(node.op, ast.Add) else left - right if isinstance(node.op, ast.Sub) else left * right
+        raise ValueError("Expression invalide : seuls +, −, *, les nombres et les parenthèses sont acceptés")
+    return visit(tree)
+
+def _spectrum(values, sample_period, transform):
+    if transform == "rfft":
+        coefficients = np.fft.rfft(values); frequencies = np.fft.rfftfreq(values.size, d=sample_period)
+        amplitudes = np.abs(coefficients) / values.size
+        if amplitudes.size > 1: amplitudes[1:-1 if values.size % 2 == 0 else None] *= 2
+    else:
+        coefficients = np.fft.fftshift(np.fft.fft(values)); frequencies = np.fft.fftshift(np.fft.fftfreq(values.size, d=sample_period)); amplitudes = np.abs(coefficients) / values.size
+    return frequencies, amplitudes, np.angle(coefficients)
 
 def compute(payload):
-    sample_period = float(payload["samplePeriod"])
-    duration = float(payload["duration"])
-    # Même convention que le TP : la borne supérieure est exclue.
-    times = np.arange(0, duration, sample_period, dtype=np.float64)
-    components = [_component(signal, times) for signal in payload["signals"]]
-    if not components:
-        return {"times": times, "components": [], "combined": np.zeros(times.size), "frequencies": np.array([]), "amplitudes": np.array([]), "phases": np.array([]), "resolution": 0.0, "nyquist": 1 / (2 * sample_period)}
-    combined = components[0].copy()
-    for signal, values in zip(payload["signals"][1:], components[1:]):
-        if signal.get("operation") == "multiply": combined *= values
-        else: combined += values
-    if payload["transform"] == "rfft":
-        coefficients = np.fft.rfft(combined)
-        frequencies = np.fft.rfftfreq(combined.size, d=sample_period)
-        amplitudes = np.abs(coefficients) / combined.size
-        if amplitudes.size > 1:
-            amplitudes[1:-1 if combined.size % 2 == 0 else None] *= 2
-    else:
-        coefficients = np.fft.fftshift(np.fft.fft(combined))
-        frequencies = np.fft.fftshift(np.fft.fftfreq(combined.size, d=sample_period))
-        amplitudes = np.abs(coefficients) / combined.size
-    return {"times": times, "components": components, "combined": combined, "frequencies": frequencies, "amplitudes": amplitudes, "phases": np.angle(coefficients), "resolution": 1 / (combined.size * sample_period), "nyquist": 1 / (2 * sample_period)}
+    sample_period, signals = float(payload["samplePeriod"]), payload["signals"]
+    results, definitions = [], []
+    for signal in signals:
+        start, end = float(signal["start"]), float(signal["end"])
+        if end <= start: raise ValueError(f"{signal['code']} : la fin doit être supérieure au début")
+        times = np.arange(start, end, sample_period, dtype=np.float64)
+        # Les signaux précédents sont réévalués sur l'axe propre de la combinaison.
+        environment = {previous["code"]: evaluate(previous, times, definitions[:index]) for index, previous in enumerate(definitions)}
+        if signal["definition"] == "wav": values = _wav(signal, times)
+        elif signal["definition"] == "combination": values = np.asarray(_expression(signal.get("expression", ""), environment), dtype=np.float64) + np.zeros(times.size)
+        else: values = _function(signal, times)
+        frequencies, amplitudes, phases = _spectrum(values, sample_period, payload["transform"])
+        results.append({"times": times, "values": values, "frequencies": frequencies, "amplitudes": amplitudes, "phases": phases, "resolution": 1 / (values.size * sample_period)})
+        definitions.append(signal)
+    return {"signals": results, "nyquist": 1 / (2 * sample_period)}
+
+def evaluate(signal, times, previous):
+    mask = (times >= float(signal["start"])) & (times < float(signal["end"]))
+    if signal["definition"] == "wav": return np.where(mask, _wav(signal, times), 0)
+    if signal["definition"] == "function":
+        values = _function(signal, times)
+        return np.where(mask, values, 0)
+    environment = {item["code"]: evaluate(item, times, previous[:index]) for index, item in enumerate(previous)}
+    values = np.asarray(_expression(signal.get("expression", ""), environment), dtype=np.float64) + np.zeros(times.size)
+    return np.where(mask, values, 0)
