@@ -18,7 +18,7 @@ Servez le dossier `docs` avec un serveur HTTP local, puis ouvrez
 `tim/filtrage/`. La racine redirige actuellement vers cette première
 démonstration. Le démonstrateur `tim/contours/` présente les opérateurs de
 gradient, les passages par zéro, Canny et le tracé des contours. Une connexion Internet est nécessaire au premier chargement pour
-récupérer OpenCV.js depuis la documentation officielle. Le démonstrateur `tds/fourier/` permet de composer ou charger des signaux puis d’explorer leurs spectres FFT et RFFT.
+récupérer OpenCV.js depuis la documentation officielle. Le démonstrateur `tds/fourier/` permet de composer ou charger des signaux puis d’explorer leur transformée de Fourier (FFT).
 
 ## Déploiement
 

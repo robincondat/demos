@@ -61,19 +61,21 @@ main { padding-top:14px; }
 .python-status { display:flex; align-items:center; gap:7px; margin:7px 0 0; color:var(--signal-green); font-size:.72rem; font-weight:700; }
 .python-status::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
 .signal-card { padding:0; }
-.signal-card > summary { display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto auto; align-items:center; gap:8px; padding:11px; cursor:pointer; list-style:none; }
+.signal-card > summary { display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; align-items:center; gap:8px; padding:11px; cursor:pointer; list-style:none; }
 .signal-card > summary::-webkit-details-marker { display:none; }
-.signal-card > summary::after { content:"⌄"; color:var(--muted); grid-column:5; }
+.signal-card > summary::after { content:"⌄"; color:var(--muted); grid-column:4; }
 .signal-card:not([open]) > summary::after { transform:rotate(-90deg); }
 .signal-color { width:9px; height:9px; border-radius:50%; background:var(--signal-color); }
 .signal-card > summary strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.82rem; }
-.signal-code { display:grid; place-items:center; min-width:31px; height:22px; padding:0 6px; border-radius:11px; background:#eaf6f2; color:#0f7256; font-size:.68rem; font-weight:850; }
+.signal-card > summary strong,
+.signal-identifier { color:#0f7256; font-weight:850; }
 .signal-card-content { padding:0 11px 11px; border-top:1px solid var(--line); }
 .signal-card-content .signal-card-heading { padding-top:10px; }
 .signal-card .common-fields { margin-top:9px; }
 .visibility-toggle { display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--muted); font-size:.68rem; font-weight:750; }
 .visibility-toggle input { margin:0; accent-color:var(--signal-green); }
 .definition-panel { margin-top:10px; padding-top:1px; }
+.sampling-rate-field { margin-top:11px !important; }
 .interval-fields { margin-top:11px; padding-top:11px; border-top:1px solid var(--line); }
 .wav-drop { display:flex; flex-direction:column; gap:3px; padding:12px; border:1px dashed #aebdca; border-radius:7px; background:#fff; cursor:pointer; text-align:center; }
 .wav-drop input { position:absolute; opacity:0; pointer-events:none; }

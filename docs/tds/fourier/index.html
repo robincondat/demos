@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Composez des signaux et explorez leurs spectres d’amplitude et de phase avec la FFT ou la RFFT." />
+  <meta name="description" content="Composez des signaux et explorez leurs spectres d’amplitude et de phase avec la transformée de Fourier." />
   <title>TS - Transformée de Fourier</title>
   <link rel="stylesheet" href="../../shared/styles/base.css" />
   <link rel="stylesheet" href="../../shared/styles/theme.css" />
@@ -34,24 +34,14 @@
 
       <aside class="signal-workbench" aria-label="Composition et transformée du signal">
         <section class="workbench-section">
-          <div class="section-heading"><p class="eyebrow">ÉCHANTILLONNAGE</p><h2>Grille temporelle</h2></div>
-          <div class="two-fields">
-            <label class="field"><span>Temps d’échantillonnage</span><div class="input-unit"><input id="samplePeriod" type="number" min="0.000001" step="0.01" value="1" /><span>ms</span></div></label>
-            <label class="field"><span>Fréquence d’échantillonnage</span><div class="input-unit"><input id="sampleRate" type="number" min="0.001" step="1" value="1000" /><span>Hz</span></div></label>
-          </div>
-          <p class="sampling-info" id="samplingInfo">—</p><p class="python-status" id="pythonStatus">Initialisation du moteur scientifique Python…</p>
-        </section>
-
-        <section class="workbench-section">
-          <div class="section-heading"><p class="eyebrow">COMPOSITION</p><h2>Signaux</h2></div>
+          <div class="section-heading"><p class="eyebrow">COMPOSITION</p><h2>Signaux</h2></div><p class="python-status" id="pythonStatus">Initialisation du moteur scientifique Python…</p>
           <div class="signal-list" id="signalList"></div>
           <button class="secondary-button add-signal" id="addSignal" type="button">+ Ajouter une composante</button>
           <p class="validation" id="signalError" role="alert"></p>
         </section>
 
         <section class="workbench-section transform-settings">
-          <div class="section-heading"><p class="eyebrow">TRANSFORMÉE</p><h2>Paramètres de Fourier</h2></div>
-          <fieldset class="transform-choice"><legend>Type de transformée</legend><label><input type="radio" name="transform" value="rfft" checked /><span>RFFT <small>Spectre positif</small></span></label><label><input type="radio" name="transform" value="fft" /><span>FFT <small>Spectre bilatéral</small></span></label></fieldset>
+          <div class="section-heading"><p class="eyebrow">TRANSFORMÉE</p><h2>Informations FFT</h2></div>
           <dl class="transform-info"><div><dt>Points calculés</dt><dd id="fftPoints">—</dd></div><div><dt>Résolution fréquentielle</dt><dd id="frequencyResolution">—</dd></div><div><dt>Fréquence de Nyquist-Shannon</dt><dd id="nyquistFrequency">—</dd></div></dl>
         </section>
         <button class="secondary-button reset-button" id="resetButton" type="button">Réinitialiser</button>
@@ -61,11 +51,11 @@
   <template id="signalTemplate">
     <details class="signal-card">
       <summary>
-        <i class="signal-color"></i><strong data-summary-name>Signal</strong><span class="signal-code" data-summary-code>S1</span>
+        <i class="signal-color"></i><strong data-summary-code>S1</strong>
         <label class="visibility-toggle" title="Afficher ce signal"><input data-field="visible" type="checkbox" checked /><span>Afficher</span></label>
       </summary>
       <div class="signal-card-content">
-        <div class="signal-card-heading"><label class="field signal-name"><span>Nom</span><input data-field="name" type="text" /></label><button class="remove-signal" type="button" aria-label="Supprimer ce signal">×</button></div>
+        <div class="signal-card-heading"><strong class="signal-identifier" data-card-code>S1</strong><button class="remove-signal" type="button" aria-label="Supprimer ce signal">×</button></div>
         <label class="field full"><span>Définition</span><select data-field="definition"><option value="function">Fonction usuelle</option><option value="wav">Fichier WAV</option><option value="combination">Combinaison de signaux</option></select></label>
         <div class="definition-panel function-definition">
           <label class="field full"><span>Forme</span><select data-field="type"><option value="sine">Sinus</option><option value="cosine">Cosinus</option><option value="square">Carré</option><option value="triangle">Triangulaire</option><option value="gate">Porte</option><option value="step">Échelon</option></select></label>
@@ -74,17 +64,18 @@
         </div>
         <div class="definition-panel wav-definition" hidden>
           <label class="wav-drop"><input data-field="wavFile" type="file" accept=".wav,audio/wav,audio/x-wav" /><strong>Choisir un fichier WAV</strong><span data-wav-name>Aucun fichier chargé</span></label>
-          <div class="two-fields common-fields"><label class="field"><span>Amplitude</span><input data-field="wavAmplitude" type="number" step="0.1" value="1" /></label><label class="field"><span>Offset</span><input data-field="wavOffset" type="number" step="0.1" value="0" /></label></div>
+          <div class="two-fields common-fields"><label class="field"><span>Amplitude</span><input data-field="amplitude" type="number" step="0.1" value="1" /></label><label class="field"><span>Offset</span><input data-field="offset" type="number" step="0.1" value="0" /></label></div>
         </div>
         <div class="definition-panel combination-definition" hidden>
           <label class="field full"><span>Expression</span><input data-field="expression" type="text" placeholder="S1 + S2 * S3" /></label>
           <p class="expression-help" data-expression-help>Utilisez les signaux précédents avec +, −, * et des parenthèses.</p>
         </div>
+        <label class="field full sampling-rate-field"><span>Fréquence d’échantillonnage</span><div class="input-unit"><input data-field="sampleRate" type="number" min="0.001" step="1" value="1000" /><span>Hz</span></div></label>
         <div class="two-fields interval-fields"><label class="field"><span>Début du signal</span><div class="input-unit"><input data-field="start" type="number" step="0.01" value="0" /><span>s</span></div></label><label class="field"><span>Fin du signal</span><div class="input-unit"><input data-field="end" type="number" step="0.01" value="1" /><span>s</span></div></label></div>
       </div>
     </details>
   </template>
   <script type="module" src="../../shared/components/course-header.js"></script>
-  <script type="module" src="./scripts/app.js?v=20261004"></script>
+  <script type="module" src="./scripts/app.js?v=20261004b"></script>
 </body>
 </html>

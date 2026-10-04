@@ -4,7 +4,7 @@ async function initialize() {
   importScripts(`${PYODIDE_URL}pyodide.js`);
   const pyodide = await loadPyodide({ indexURL: PYODIDE_URL });
   await pyodide.loadPackage("numpy");
-  const source = await fetch("./scientific.py?v=20261004").then((response) => response.text());
+  const source = await fetch("./scientific.py?v=20261004b").then((response) => response.text());
   pyodide.runPython(source);
   postMessage({ type: "ready" });
   return pyodide;
@@ -23,8 +23,13 @@ import js
 from pyodide.ffi import to_js
 _payload = json.loads(payload_json)
 for _index, _signal in enumerate(_payload["signals"]):
-    if _signal["type"] == "wav":
-        _signal["samples"] = np.asarray(globals()[f"wav_{_index}"].to_py(), dtype=np.float32)
+    if _signal["definition"] == "wav":
+        _wav_value = globals()[f"wav_{_index}"]
+        # Selon la version de Pyodide, un TypedArray devient soit un JsProxy,
+        # soit directement une vue Python du tampon. Les deux cas sont valides.
+        if hasattr(_wav_value, "to_py"):
+            _wav_value = _wav_value.to_py()
+        _signal["samples"] = np.asarray(_wav_value, dtype=np.float32).reshape(-1)
 _result = compute(_payload)
 to_js(_result, dict_converter=js.Object.fromEntries)
 `);
