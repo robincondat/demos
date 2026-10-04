@@ -44,9 +44,13 @@ def _expression(expression, environment):
 def _spectrum(values, sample_period):
     coefficients = np.fft.fftshift(np.fft.fft(values))
     frequencies = np.fft.fftshift(np.fft.fftfreq(values.size, d=sample_period))
-    # Spectre brut, identique à np.abs(np.fft.fft(values)) dans le TP.
-    amplitudes = np.abs(coefficients)
-    return frequencies, amplitudes, np.angle(coefficients)
+    amplitudes = np.abs(coefficients) / values.size
+    phases = np.where(
+        amplitudes > 0.01 * amplitudes.max(),
+        np.angle(coefficients),
+        0,
+    )
+    return frequencies, amplitudes, phases
 
 def compute(payload):
     signals = payload["signals"]

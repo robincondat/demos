@@ -5,7 +5,7 @@ const elements = Object.fromEntries(["pythonStatus","signalList","addSignal","si
 const timeChart = createChart({ stage: byId("timeStage"), canvas: byId("timeChart"), tooltip: byId("timeTooltip"), xLabel: "Temps (s)", yLabel: () => "Amplitude" });
 const amplitudeChart = createChart({ stage: byId("amplitudeStage"), canvas: byId("amplitudeChart"), tooltip: byId("amplitudeTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => "Amplitude" });
 const phaseChart = createChart({ stage: byId("phaseStage"), canvas: byId("phaseChart"), tooltip: byId("phaseTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => "Phase (rad)" });
-const worker = new Worker("./scripts/scientific-worker.js?v=20261004b");
+const worker = new Worker("./scripts/scientific-worker.js?v=20261004c");
 let signals = [], updateTimer = null, requestId = 0, pythonReady = false;
 const numeric = (input, fallback = 0) => {
   const value = input ? Number(input.value) : Number.NaN;
