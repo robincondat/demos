@@ -36,6 +36,7 @@ to_js(_result, dict_converter=js.Object.fromEntries)
     postMessage({ type: "result", id: data.id, result });
     result.destroy?.();
   } catch (error) {
-    postMessage({ type: "error", id: data.id, message: error.message });
+    const lines = String(error.message || error).split("\n").filter(Boolean);
+    postMessage({ type: "error", id: data.id, message: lines.at(-1) });
   }
 };

@@ -24,7 +24,9 @@ def _wav(signal, times):
     return float(signal.get("amplitude", 1)) * np.interp(local_times, source_times, source, left=0, right=0) + float(signal.get("offset", 0))
 
 def _expression(expression, environment):
-    tree = ast.parse(expression, mode="eval")
+    if not expression.strip(): raise ValueError("L’expression de combinaison est vide")
+    try: tree = ast.parse(expression, mode="eval")
+    except SyntaxError as error: raise ValueError("Expression de combinaison invalide") from error
     def visit(node):
         if isinstance(node, ast.Expression): return visit(node.body)
         if isinstance(node, ast.Name):
@@ -42,7 +44,8 @@ def _expression(expression, environment):
 def _spectrum(values, sample_period):
     coefficients = np.fft.fftshift(np.fft.fft(values))
     frequencies = np.fft.fftshift(np.fft.fftfreq(values.size, d=sample_period))
-    amplitudes = np.abs(coefficients) / values.size
+    # Spectre brut, identique à np.abs(np.fft.fft(values)) dans le TP.
+    amplitudes = np.abs(coefficients)
     return frequencies, amplitudes, np.angle(coefficients)
 
 def compute(payload):

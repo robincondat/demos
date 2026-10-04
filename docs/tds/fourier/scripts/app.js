@@ -33,6 +33,12 @@ function bindField(card, signal, field) {
 function renderSignals(openId = null) {
   elements.signalList.replaceChildren(...signals.map((signal, index) => {
     const card = elements.signalTemplate.content.firstElementChild.cloneNode(true); card.dataset.id = signal.id; card.style.setProperty("--signal-color", palette[index % palette.length]); card.open = signal.id === openId;
+    const combinationOption = card.querySelector(
+      '[data-field="definition"] option[value="combination"]',
+    );
+    combinationOption.disabled = index === 0;
+    if (index === 0 && signal.definition === "combination")
+      signal.definition = "function";
     for (const field of ["visible","definition","type","frequency","delay","sampleRate","amplitude","offset","expression","start","end"]) bindField(card, signal, field);
     card.querySelector("[data-summary-code]").textContent = signal.code; card.querySelector("[data-card-code]").textContent = signal.code;
     const available = signals.slice(0, index).map(({ code }) => code); card.querySelector("[data-expression-help]").textContent = available.length ? `Signaux disponibles : ${available.join(", ")}. Opérateurs : +, −, * et parenthèses.` : "Aucun signal précédent n’est disponible pour cette combinaison.";
@@ -62,6 +68,16 @@ function update() {
     const data = payload(); elements.signalError.textContent = "";
     if (!pythonReady) { elements.pythonStatus.textContent = "Initialisation du moteur scientifique Python…"; return; }
     if (!signals.length) { clearSignalResults(); elements.nyquistFrequency.textContent = "—"; elements.pythonStatus.textContent = "NumPy prêt"; return; }
+    const invalidCombination = signals.findIndex(
+      (signal, index) =>
+        signal.definition === "combination" &&
+        (index === 0 || !signal.expression.trim()),
+    );
+    if (invalidCombination >= 0) {
+      throw new Error(
+        `${signals[invalidCombination].code} : indiquez une expression utilisant un signal précédent.`,
+      );
+    }
     elements.pythonStatus.textContent = "Calcul NumPy en cours…"; worker.postMessage({ type: "compute", id: ++requestId, payload: data });
   } catch (error) { elements.signalError.textContent = error.message; }
 }
@@ -77,7 +93,20 @@ function display(result) {
   elements.signalSummary.textContent = signals.length ? label : "—"; elements.amplitudeSummary.textContent = visible.length ? label : "—"; elements.phaseSummary.textContent = visible.length ? `FFT · ${label}` : "—";
   elements.fftPoints.textContent = rangeLabel(visible.map(({ data }) => data.values.length)); elements.frequencyResolution.textContent = rangeLabel(visible.map(({ data }) => Number(data.resolution.toPrecision(6))), " Hz"); elements.nyquistFrequency.textContent = rangeLabel(visible.map(({ data }) => Number(data.nyquist.toPrecision(8))), " Hz");
 }
-worker.addEventListener("message", ({ data }) => { if (data.type === "ready") { pythonReady = true; elements.pythonStatus.textContent = "NumPy prêt"; update(); } else if (data.type === "error") { elements.pythonStatus.textContent = "Moteur Python indisponible"; elements.signalError.textContent = data.message; } else if (data.type === "result" && data.id === requestId) { elements.pythonStatus.textContent = "NumPy prêt"; display(data.result); } });
+worker.addEventListener("message", ({ data }) => {
+  if (data.type === "ready") {
+    pythonReady = true;
+    elements.pythonStatus.textContent = "NumPy prêt";
+    update();
+  } else if (data.type === "error" && (data.id == null || data.id === requestId)) {
+    elements.pythonStatus.textContent =
+      data.id == null ? "Moteur Python indisponible" : "NumPy prêt";
+    elements.signalError.textContent = data.message;
+  } else if (data.type === "result" && data.id === requestId) {
+    elements.pythonStatus.textContent = "NumPy prêt";
+    display(data.result);
+  }
+});
 elements.addSignal.addEventListener("click", () => { const signal = makeSignal(signals.map(({ code }) => code)); signals.push(signal); renderSignals(signal.id); schedule(); });
 elements.resetButton.addEventListener("click", () => { signals = []; renderSignals(); update(); });
 elements.resetButton.click();
