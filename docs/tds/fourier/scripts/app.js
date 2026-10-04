@@ -5,10 +5,14 @@ const elements = Object.fromEntries(["samplePeriod","sampleRate","samplingInfo",
 const timeChart = createChart({ stage: byId("timeStage"), canvas: byId("timeChart"), tooltip: byId("timeTooltip"), xLabel: "Temps (s)", yLabel: () => "Amplitude" });
 const amplitudeChart = createChart({ stage: byId("amplitudeStage"), canvas: byId("amplitudeChart"), tooltip: byId("amplitudeTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => "Amplitude" });
 const phaseChart = createChart({ stage: byId("phaseStage"), canvas: byId("phaseChart"), tooltip: byId("phaseTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => "Phase (rad)" });
-const worker = new Worker("./scripts/scientific-worker.js");
+const worker = new Worker("./scripts/scientific-worker.js?v=20261004");
 let signals = [], updateTimer = null, requestId = 0, pythonReady = false, syncingSampling = false;
-const numeric = (input, fallback = 0) => Number.isFinite(Number(input.value)) ? Number(input.value) : fallback;
-const transformType = () => document.querySelector('input[name="transform"]:checked').value;
+const numeric = (input, fallback = 0) => {
+  const value = input ? Number(input.value) : Number.NaN;
+  return Number.isFinite(value) ? value : fallback;
+};
+const transformType = () =>
+  document.querySelector('input[name="transform"]:checked')?.value ?? "rfft";
 const schedule = () => { clearTimeout(updateTimer); updateTimer = setTimeout(update, 80); };
 function updateCardVisibility(card, signal) {
   card.querySelector(".function-definition").hidden = signal.definition !== "function";
@@ -48,10 +52,30 @@ function payload() {
   if (!(samplePeriod > 0)) throw new Error("Le temps d’échantillonnage doit être strictement positif.");
   return { samplePeriod, transform: transformType(), signals };
 }
+function clearSignalResults() {
+  timeChart.setData([]);
+  amplitudeChart.setData([]);
+  phaseChart.setData([]);
+  byId("timeEmpty").hidden = false;
+  elements.signalSummary.textContent =
+    elements.amplitudeSummary.textContent =
+    elements.phaseSummary.textContent =
+    elements.fftPoints.textContent =
+    elements.frequencyResolution.textContent =
+      "—";
+}
 function update() {
   try {
     const data = payload(); elements.signalError.textContent = ""; elements.samplingInfo.textContent = `Tₑ = ${Number((data.samplePeriod * 1000).toPrecision(8))} ms · fₑ = ${Number((1 / data.samplePeriod).toPrecision(8))} Hz`;
     if (!pythonReady) { elements.pythonStatus.textContent = "Initialisation du moteur scientifique Python…"; return; }
+    if (!signals.length) {
+      clearSignalResults();
+      elements.nyquistFrequency.textContent = `${Number(
+        (1 / (2 * data.samplePeriod)).toPrecision(8),
+      )} Hz`;
+      elements.pythonStatus.textContent = "NumPy prêt";
+      return;
+    }
     elements.pythonStatus.textContent = "Calcul NumPy en cours…"; worker.postMessage({ type: "compute", id: ++requestId, payload: data });
   } catch (error) { elements.signalError.textContent = error.message; }
 }
