@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Explorez les gradients, les passages par zéro, Canny et la détection de contours."
+    />
+    <title>TIM - Extraction de contours</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101a2c'/%3E%3Cg fill='%234fd1c5'%3E%3Crect x='12' y='12' width='11' height='11' rx='2'/%3E%3Crect x='27' y='12' width='11' height='11' rx='2'/%3E%3Crect x='42' y='12' width='11' height='11' rx='2'/%3E%3Crect x='12' y='27' width='11' height='11' rx='2'/%3E%3Crect x='27' y='27' width='11' height='11' rx='2' fill='%23f3b743'/%3E%3Crect x='42' y='27' width='11' height='11' rx='2'/%3E%3Crect x='12' y='42' width='11' height='11' rx='2'/%3E%3Crect x='27' y='42' width='11' height='11' rx='2'/%3E%3Crect x='42' y='42' width='11' height='11' rx='2'/%3E%3C/g%3E%3C/svg%3E"
+    />
+    <!-- Composants communs à tous les démonstrateurs TIM. -->
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/image-viewer.css" />
+    <link rel="stylesheet" href="../../shared/styles/theme.css" />
+    <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+    <!-- Ajustements propres au démonstrateur de filtrage. -->
+    <link rel="stylesheet" href="./styles/contours.css" />
+  </head>
+  <body>
+    <!-- Le titre est configurable indépendamment pour chaque démonstrateur. -->
+    <course-header
+      page-title="Extraction de contours"
+      course-code="TIM"
+      course-name="Traitement d’Images"
+      instructor="Robin Condat"
+    ></course-header>
+    <div class="runtime" aria-live="polite" hidden>
+      <span id="runtimeDot"></span
+      ><span id="runtimeText">Chargement d’OpenCV…</span>
+    </div>
+
+    <main>
+      <!-- Chargement et export de l'image -->
+      <section class="upload-row" aria-label="Chargement de l’image">
+        <label class="file-button" for="imageInput">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5" />
+          </svg>
+          Charger une image
+        </label>
+        <input
+          id="imageInput"
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.pbm,.pgm,.ppm,image/jpeg,image/png,image/webp,image/bmp,image/tiff"
+        />
+        <div class="file-meta" hidden>
+          <strong id="fileName">Aucune image chargée</strong>
+          <span id="imageMeta"
+            >JPEG, PNG, WebP, BMP, TIFF, PBM, PGM ou PPM</span
+          >
+        </div>
+        <button
+          id="downloadButton"
+          class="secondary-button"
+          type="button"
+          disabled
+        >
+          Télécharger la vue
+        </button>
+      </section>
+
+      <!-- Espace de travail : visualisation à gauche, paramètres à droite -->
+      <div class="workspace-layout">
+        <div class="visual-workspace">
+          <!-- Comparaison originale / résultat -->
+          <section class="comparison" aria-label="Comparaison des images">
+            <article class="image-panel">
+              <div class="panel-heading">
+                <h2>Image originale</h2>
+                <span id="originalBadge" hidden>—</span>
+              </div>
+              <div class="canvas-stage empty" id="originalStage">
+                <canvas id="originalCanvas"></canvas>
+                <div class="empty-state">
+                  <p>Chargez une image pour commencer</p>
+                </div>
+              </div>
+            </article>
+            <article class="image-panel">
+              <div class="panel-heading">
+                <h2>Image traitée</h2>
+                <label class="result-view-label" for="resultView"><select id="resultView" disabled aria-label="Étape du traitement affichée"></select></label>
+                <span id="resultBadge" hidden>—</span>
+              </div>
+              <div class="canvas-stage empty" id="resultStage">
+                <canvas id="resultCanvas"></canvas>
+                <div class="empty-state"><p>L’étape sélectionnée apparaîtra ici</p></div>
+                <div class="processing" id="processing" hidden>Calcul…</div>
+              </div>
+            </article>
+          </section>
+
+          <!-- Plages d'affichage et navigation synchronisée -->
+          <section class="display-tools" aria-label="Options d’affichage">
+            <div
+              class="display-settings"
+              aria-labelledby="originalDisplayTitle"
+            >
+              <div class="display-settings-heading">
+                <strong id="originalDisplayTitle"
+                  >Affichage de l’image originale</strong
+                >
+                <label class="check compact-check"
+                  ><input id="originalAutoRange" type="checkbox" /><span
+                    >Normalisation min–max</span
+                  ></label
+                >
+              </div>
+              <div class="display-range-fields">
+                <label class="field"
+                  ><span>Valeur noire</span
+                  ><input
+                    id="originalDisplayMin"
+                    type="number"
+                    step="any"
+                    value="0"
+                /></label>
+                <span class="range-arrow" aria-hidden="true">→</span>
+                <label class="field"
+                  ><span>Valeur blanche</span
+                  ><input
+                    id="originalDisplayMax"
+                    type="number"
+                    step="any"
+                    value="255"
+                /></label>
+              </div>
+              <p
+                class="validation display-validation"
+                id="originalDisplayRangeError"
+                role="alert"
+              ></p>
+            </div>
+
+            <div
+              class="view-toolbar"
+              aria-label="Navigation synchronisée dans les images"
+            >
+              <div class="view-toolbar-heading">
+                <strong>Navigation</strong>
+              </div>
+              <div class="zoom-controls">
+                <input
+                  id="zoomSlider"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="384"
+                  aria-label="Niveau de zoom"
+                  disabled
+                />
+                <output id="zoomLabel" for="zoomSlider" aria-live="polite"
+                  >100 %</output
+                >
+                <button id="fitView" type="button" disabled>Ajuster</button>
+              </div>
+            </div>
+
+            <div class="display-settings" aria-labelledby="resultDisplayTitle">
+              <div class="display-settings-heading">
+                <strong id="resultDisplayTitle"
+                  >Affichage de l’image traitée</strong
+                >
+                <label class="check compact-check"
+                  ><input id="resultAutoRange" type="checkbox" checked /><span
+                    >Normalisation min–max</span
+                  ></label
+                >
+              </div>
+              <div class="display-range-fields">
+                <label class="field"
+                  ><span>Valeur noire</span
+                  ><input
+                    id="resultDisplayMin"
+                    type="number"
+                    step="any"
+                    value="0"
+                /></label>
+                <span class="range-arrow" aria-hidden="true">→</span>
+                <label class="field"
+                  ><span>Valeur blanche</span
+                  ><input
+                    id="resultDisplayMax"
+                    type="number"
+                    step="any"
+                    value="255"
+                /></label>
+              </div>
+              <p
+                class="validation display-validation"
+                id="resultDisplayRangeError"
+                role="alert"
+              ></p>
+            </div>
+          </section>
+
+          <!-- Mesures, valeurs sous le curseur et histogrammes -->
+          <section class="analysis-strip" aria-label="Analyse des images">
+            <article class="analysis-panel image-information">
+              <h2>Informations sur l’image</h2>
+              <dl>
+                <div>
+                  <dt>Dimensions</dt>
+                  <dd id="infoDimensions">—</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd id="infoType">—</dd>
+                </div>
+                <div>
+                  <dt>Plage originale</dt>
+                  <dd id="infoOriginalRange">—</dd>
+                </div>
+                <div>
+                  <dt>Taille du fichier</dt>
+                  <dd id="infoFileSize">—</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="analysis-panel cursor-information">
+              <h2>Valeurs sous le curseur</h2>
+              <dl>
+                <div>
+                  <dt>Position</dt>
+                  <dd id="cursorPosition">—</dd>
+                </div>
+                <div>
+                  <dt>Originale</dt>
+                  <dd id="cursorOriginal">—</dd>
+                </div>
+                <div>
+                  <dt>Traitée</dt>
+                  <dd id="cursorResult">—</dd>
+                </div>
+                <div>
+                  <dt>Différence</dt>
+                  <dd id="cursorDifference">—</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="analysis-panel histogram-panel">
+              <h2>Histogrammes</h2>
+              <div class="histograms">
+                <figure>
+                  <figcaption>
+                    Originale <span id="originalHistogramRange">—</span>
+                  </figcaption>
+                  <canvas
+                    id="originalHistogram"
+                    width="360"
+                    height="120"
+                  ></canvas>
+                </figure>
+                <figure>
+                  <figcaption>
+                    Traitée <span id="resultHistogramRange">—</span>
+                  </figcaption>
+                  <canvas
+                    id="resultHistogram"
+                    width="360"
+                    height="120"
+                  ></canvas>
+                </figure>
+              </div>
+            </article>
+          </section>
+        </div>
+
+        <!-- Choix du filtre et paramètres associés -->
+        <aside class="workbench contour-workbench" aria-label="Chaîne de traitement des contours">
+          <div class="section-title"><div><h2>Chaîne de traitement</h2></div></div>
+
+          <details class="pipeline-step">
+            <summary><span class="step-number">1</span><span><b>Prétraitement</b></span></summary>
+            <div class="step-content">
+              <label class="check"><input id="gaussianEnabled" type="checkbox" checked /><span>Activer le lissage gaussien</span></label>
+              <div id="gaussianSettings" class="control-stack">
+                <label class="field full"><span>Taille du noyau</span><input id="gaussianSize" type="number" min="1" max="31" step="2" value="5" /></label>
+                <label class="field full"><span>Écart-type σ</span><input id="gaussianSigma" type="number" min="0" max="20" step="0.1" value="1.4" /></label>
+              </div>
+            </div>
+          </details>
+
+          <details class="pipeline-step">
+            <summary><span class="step-number">2</span><span><b>Extraction des gradients</b></span></summary>
+            <div class="step-content">
+              <label class="field full"><span>Méthode</span><select id="method"><option value="sobel">Sobel</option><option value="prewitt">Prewitt</option><option value="laplacian">Laplacien</option><option value="dog">DoG — Difference of Gaussians</option><option value="canny">Canny</option></select></label>
+              <div id="firstOrderSettings" class="method-settings">
+                <label class="field full"><span>Taille du noyau</span><select id="derivativeSize"><option value="3">3 × 3</option><option value="5">5 × 5</option><option value="7">7 × 7</option></select></label>
+              </div>
+              <div id="laplacianSettings" class="method-settings" hidden>
+                <label class="field full"><span>Taille du noyau</span><select id="laplacianSize"><option value="3">3 × 3</option><option value="5">5 × 5</option><option value="7">7 × 7</option></select></label><label class="field full"><span>Voisinage</span><select id="laplacianConnectivity"><option value="4">4-connexe</option><option value="8">8-connexe</option></select></label>
+              </div>
+              <div id="dogSettings" class="method-settings" hidden>
+                <label class="field full"><span>Taille des noyaux gaussiens</span><select id="dogSize"><option value="3">3 × 3</option><option value="5" selected>5 × 5</option><option value="7">7 × 7</option></select></label><div class="inline-fields"><label class="field"><span>σ₁</span><input id="dogSigma1" type="number" min="0.1" max="20" step="0.1" value="1" /></label><label class="field"><span>σ₂</span><input id="dogSigma2" type="number" min="0.1" max="20" step="0.1" value="2" /></label></div>
+              </div>
+              <div id="cannySettings" class="method-settings" hidden>
+                <label class="field full"><span>Taille Sobel</span><select id="cannyAperture"><option value="3">3 × 3</option><option value="5">5 × 5</option><option value="7">7 × 7</option></select></label>
+                <label class="check"><input id="cannyL2" type="checkbox" checked /><span>Norme L2 du gradient</span></label>
+              </div>
+              <section id="kernelPreview" class="kernel-preview" aria-live="polite"><h3>Noyaux appliqués</h3><div id="kernelPreviewContent"></div></section>
+            </div>
+          </details>
+
+          <details class="pipeline-step">
+            <summary><span class="step-number">3</span><span><b>Post-traitement</b></span></summary>
+            <div class="step-content">
+              <h3 class="post-treatment-title" id="postTreatmentTitle">Normalisation et seuillage</h3>
+              <div id="thresholdSettings"><label class="field full"><span>Seuil de l’amplitude normalisée</span><div class="range-control"><input id="gradientThreshold" type="range" min="0" max="255" value="80" /><output id="gradientThresholdValue">80</output></div></label></div>
+              <div id="zeroCrossingSettings" hidden>
+                <label class="field full"><span>Détection</span><select id="zeroCrossingMode"><option value="simple">Fenêtre 3 × 3 simplifiée</option><option value="advanced">Paires opposées avancée</option></select></label>
+                <label class="field full"><span>Variation minimale</span><input id="zeroThresholdDifference" type="number" min="0" step="0.1" value="20" /></label>
+                <div id="simpleZeroSettings" class="inline-fields"><label class="field"><span>Seuil min.</span><input id="zeroThresholdMin" type="number" step="0.1" value="0" /></label><label class="field"><span>Seuil max.</span><input id="zeroThresholdMax" type="number" step="0.1" value="0" /></label></div>
+              </div>
+              <div id="cannyThresholdSettings" hidden><div class="inline-fields"><label class="field"><span>Seuil bas</span><input id="cannyLow" type="number" min="0" max="255" value="50" /></label><label class="field"><span>Seuil haut</span><input id="cannyHigh" type="number" min="0" max="255" value="150" /></label></div></div>
+            </div>
+          </details>
+
+          <details class="pipeline-step">
+            <summary><span class="step-number">4</span><span><b>Détection des contours</b></span></summary>
+            <div class="step-content">
+              <label class="field full"><span>Mode de récupération</span><select id="retrievalMode"><option value="external">RETR_EXTERNAL</option><option value="list">RETR_LIST</option><option value="ccomp">RETR_CCOMP</option><option value="tree">RETR_TREE</option></select></label>
+              <p class="option-explanation" id="retrievalExplanation"></p>
+              <label class="field full"><span>Approximation</span><select id="approximationMode"><option value="simple">CHAIN_APPROX_SIMPLE</option><option value="none">CHAIN_APPROX_NONE</option><option value="tc89l1">CHAIN_APPROX_TC89_L1</option><option value="tc89kcos">CHAIN_APPROX_TC89_KCOS</option></select></label>
+              <p class="option-explanation" id="approximationExplanation"></p>
+              <label class="check"><input id="drawContours" type="checkbox" checked /><span>Dessiner les contours en rouge</span></label>
+              <p class="contour-count" id="contourCount">Chargez une image pour détecter les contours.</p>
+            </div>
+          </details>
+
+          <p class="validation" id="parameterError" role="alert"></p>
+          <div class="footer-actions"><button id="resetButton" class="secondary-button reset-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68" /></svg><span>Réinitialiser les paramètres</span></button><span id="timing" aria-live="polite" hidden>En attente d’une image</span></div>
+        </aside>
+      </div>
+    </main>
+
+    <canvas id="sourceCanvas" hidden></canvas>
+    <script>
+      window.Module = {
+        onRuntimeInitialized() {
+          window.dispatchEvent(new Event("opencv-ready"));
+        },
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+    <script
+      type="module"
+      src="../../shared/components/course-header.js"
+    ></script>
+    <script type="module" src="./scripts/app.js"></script>
+  </body>
+</html>
