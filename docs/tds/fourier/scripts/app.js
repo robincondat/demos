@@ -1,12 +1,12 @@
 import { createChart } from "./chart.js?v=20261005";
 import { decodeWav, makeSignal, palette } from "./signals.js";
 const byId = (id) => document.getElementById(id);
-const elements = Object.fromEntries(["pythonStatus","signalList","addSignal","signalError","fftPoints","frequencyResolution","nyquistFrequency","signalSummary","amplitudeSummary","phaseSummary","resetButton","signalTemplate"].map((id) => [id, byId(id)]));
+const elements = Object.fromEntries(["signalList","addSignal","signalError","fftPoints","frequencyResolution","nyquistFrequency","significantPhaseOnly","resetButton","signalTemplate"].map((id) => [id, byId(id)]));
 const timeChart = createChart({ stage: byId("timeStage"), canvas: byId("timeChart"), tooltip: byId("timeTooltip"), xLabel: "Temps (s)", yLabel: () => "Amplitude" });
 const amplitudeChart = createChart({ stage: byId("amplitudeStage"), canvas: byId("amplitudeChart"), tooltip: byId("amplitudeTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => "Amplitude" });
 const phaseChart = createChart({ stage: byId("phaseStage"), canvas: byId("phaseChart"), tooltip: byId("phaseTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => "Phase (rad)" });
-const worker = new Worker("./scripts/scientific-worker.js?v=20261004d");
-let signals = [], updateTimer = null, requestId = 0, pythonReady = false;
+const worker = new Worker("./scripts/scientific-worker.js?v=20261005b");
+let signals = [], updateTimer = null, requestId = 0, pythonReady = false, lastResult = null;
 const numeric = (input, fallback = 0) => {
   const value = input ? Number(input.value) : Number.NaN;
   return Number.isFinite(value) ? value : fallback;
@@ -53,22 +53,20 @@ function renderSignals(openId = null) {
 }
 function payload() { return { signals }; }
 function clearSignalResults() {
+  lastResult = null;
   timeChart.setData([]);
   amplitudeChart.setData([]);
   phaseChart.setData([]);
   byId("timeEmpty").hidden = false;
-  elements.signalSummary.textContent =
-    elements.amplitudeSummary.textContent =
-    elements.phaseSummary.textContent =
-    elements.fftPoints.textContent =
+  elements.fftPoints.textContent =
     elements.frequencyResolution.textContent =
       "—";
 }
 function update() {
   try {
     const data = payload(); elements.signalError.textContent = "";
-    if (!pythonReady) { elements.pythonStatus.textContent = "Initialisation du moteur scientifique Python…"; return; }
-    if (!signals.length) { clearSignalResults(); elements.nyquistFrequency.textContent = "—"; elements.pythonStatus.textContent = "NumPy prêt"; return; }
+    if (!pythonReady) return;
+    if (!signals.length) { clearSignalResults(); elements.nyquistFrequency.textContent = "—"; return; }
     const invalidCombination = signals.findIndex(
       (signal, index) =>
         signal.definition === "combination" &&
@@ -79,7 +77,7 @@ function update() {
         `${signals[invalidCombination].code} : indiquez une expression utilisant un signal précédent.`,
       );
     }
-    elements.pythonStatus.textContent = "Calcul NumPy en cours…"; worker.postMessage({ type: "compute", id: ++requestId, payload: data });
+    worker.postMessage({ type: "compute", id: ++requestId, payload: data });
   } catch (error) { elements.signalError.textContent = error.message; }
 }
 function rangeLabel(values, suffix = "") {
@@ -89,25 +87,22 @@ function display(result) {
   const visible = signals.map((signal, index) => ({ signal, data: result.signals[index], index })).filter(({ signal }) => signal.visible);
   timeChart.setData(visible.map(({ signal, data, index }) => ({ x: data.times, y: data.values, label: signal.code, color: palette[index % palette.length], width: 1.7 })));
   amplitudeChart.setData(visible.map(({ signal, data, index }) => ({ x: data.frequencies, y: data.amplitudes, label: signal.code, color: palette[index % palette.length], width: 1.6 })));
-  phaseChart.setData(visible.map(({ signal, data, index }) => ({ x: data.frequencies, y: data.phases, label: signal.code, color: palette[index % palette.length], width: 1.35 })));
-  byId("timeEmpty").hidden = visible.length > 0; const label = `${visible.length}/${signals.length} signal${signals.length > 1 ? "aux" : ""} affiché${visible.length > 1 ? "s" : ""}`;
-  elements.signalSummary.textContent = signals.length ? label : "—"; elements.amplitudeSummary.textContent = visible.length ? label : "—"; elements.phaseSummary.textContent = visible.length ? `FFT · ${label}` : "—";
+  phaseChart.setData(visible.map(({ signal, data, index }) => ({ x: data.frequencies, y: elements.significantPhaseOnly.checked ? data.significantPhases : data.phases, label: signal.code, color: palette[index % palette.length], width: 1.35 })));
+  byId("timeEmpty").hidden = visible.length > 0;
   elements.fftPoints.textContent = rangeLabel(visible.map(({ data }) => data.values.length)); elements.frequencyResolution.textContent = rangeLabel(visible.map(({ data }) => Number(data.resolution.toPrecision(6))), " Hz"); elements.nyquistFrequency.textContent = rangeLabel(visible.map(({ data }) => Number(data.nyquist.toPrecision(8))), " Hz");
 }
 worker.addEventListener("message", ({ data }) => {
   if (data.type === "ready") {
     pythonReady = true;
-    elements.pythonStatus.textContent = "NumPy prêt";
     update();
   } else if (data.type === "error" && (data.id == null || data.id === requestId)) {
-    elements.pythonStatus.textContent =
-      data.id == null ? "Moteur Python indisponible" : "NumPy prêt";
     elements.signalError.textContent = data.message;
   } else if (data.type === "result" && data.id === requestId) {
-    elements.pythonStatus.textContent = "NumPy prêt";
+    lastResult = data.result;
     display(data.result);
   }
 });
+elements.significantPhaseOnly.addEventListener("change", () => { if (lastResult) display(lastResult); });
 elements.addSignal.addEventListener("click", () => { const signal = makeSignal(signals.map(({ code }) => code)); signals.push(signal); renderSignals(signal.id); schedule(); });
 elements.resetButton.addEventListener("click", () => { signals = []; renderSignals(); update(); });
 elements.resetButton.click();

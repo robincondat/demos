@@ -49,12 +49,13 @@ def _spectrum(values, sample_period):
     coefficients = np.fft.fftshift(np.fft.fft(values))
     frequencies = np.fft.fftshift(np.fft.fftfreq(values.size, d=sample_period))
     amplitudes = np.abs(coefficients) / values.size
-    phases = np.where(
+    phases = np.angle(coefficients)
+    significant_phases = np.where(
         amplitudes > 0.01 * amplitudes.max(),
-        np.angle(coefficients),
+        phases,
         0,
     )
-    return frequencies, amplitudes, phases
+    return frequencies, amplitudes, phases, significant_phases
 
 def compute(payload):
     signals = payload["signals"]
@@ -73,8 +74,8 @@ def compute(payload):
         if signal["definition"] == "wav": values = _wav(signal, times)
         elif signal["definition"] == "combination": values = np.asarray(_expression(signal.get("expression", ""), environment), dtype=np.float64) + np.zeros(times.size)
         else: values = _function(signal, times)
-        frequencies, amplitudes, phases = _spectrum(values, sample_period)
-        results.append({"times": times, "values": values, "frequencies": frequencies, "amplitudes": amplitudes, "phases": phases, "resolution": sample_rate / values.size, "nyquist": sample_rate / 2})
+        frequencies, amplitudes, phases, significant_phases = _spectrum(values, sample_period)
+        results.append({"times": times, "values": values, "frequencies": frequencies, "amplitudes": amplitudes, "phases": phases, "significantPhases": significant_phases, "resolution": sample_rate / values.size, "nyquist": sample_rate / 2})
         definitions.append(signal)
     return {"signals": results}
 

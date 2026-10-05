@@ -4,7 +4,7 @@ async function initialize() {
   importScripts(`${PYODIDE_URL}pyodide.js`);
   const pyodide = await loadPyodide({ indexURL: PYODIDE_URL });
   await pyodide.loadPackage(["numpy", "scipy"]);
-  const source = await fetch("./scientific.py?v=20261004d").then((response) => response.text());
+  const source = await fetch("./scientific.py?v=20261005b").then((response) => response.text());
   pyodide.runPython(source);
   postMessage({ type: "ready" });
   return pyodide;
@@ -16,6 +16,7 @@ self.onmessage = async ({ data }) => {
     const pyodide = await pyodidePromise;
     const payload = data.payload;
     pyodide.globals.set("payload_json", JSON.stringify(payload, (key, value) => key === "wavBytes" ? undefined : value));
+    pyodide.globals.set("wav_indexes_json", JSON.stringify(payload.signals.flatMap((signal, index) => signal.wavBytes ? [index] : [])));
     payload.signals.forEach((signal, index) => { if (signal.wavBytes) pyodide.globals.set(`wav_${index}`, signal.wavBytes); });
     const result = await pyodide.runPythonAsync(`
 import json
@@ -24,9 +25,15 @@ import io
 from scipy.io import wavfile
 from pyodide.ffi import to_js
 _payload = json.loads(payload_json)
+_wav_indexes = set(json.loads(wav_indexes_json))
 for _index, _signal in enumerate(_payload["signals"]):
     if _signal["definition"] == "wav":
-        _wav_value = globals()[f"wav_{_index}"]
+        _wav_key = f"wav_{_index}"
+        if _index not in _wav_indexes:
+            _signal["samples"] = np.array([], dtype=np.float64)
+            _signal["sourceSampleRate"] = float(_signal["sampleRate"])
+            continue
+        _wav_value = globals()[_wav_key]
         # Selon la version de Pyodide, un TypedArray devient soit un JsProxy,
         # soit directement une vue Python du tampon. Les deux cas sont valides.
         if hasattr(_wav_value, "to_py"):

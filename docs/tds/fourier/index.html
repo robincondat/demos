@@ -16,32 +16,34 @@
     <div class="signal-layout">
       <div class="charts-workspace">
         <article class="chart-panel signal-panel">
-          <div class="chart-heading"><div><p class="eyebrow">DOMAINE TEMPOREL</p><h2>Signal composé</h2></div><span id="signalSummary">—</span></div>
+          <div class="chart-heading"><h2>Signal composé</h2></div>
           <div class="chart-stage" id="timeStage"><canvas id="timeChart"></canvas><div class="chart-empty" id="timeEmpty">Ajoutez ou chargez un signal pour commencer</div><output class="chart-tooltip" id="timeTooltip" hidden></output></div>
         </article>
         <div class="spectra-grid">
           <article class="chart-panel">
-            <div class="chart-heading"><div><p class="eyebrow">DOMAINE FRÉQUENTIEL</p><h2>Spectre d’amplitude</h2></div><span id="amplitudeSummary">—</span></div>
+            <div class="chart-heading"><h2>Spectre d’amplitude</h2></div>
             <div class="chart-stage spectrum-stage" id="amplitudeStage"><canvas id="amplitudeChart"></canvas><output class="chart-tooltip" id="amplitudeTooltip" hidden></output></div>
           </article>
           <article class="chart-panel">
-            <div class="chart-heading"><div><p class="eyebrow">DOMAINE FRÉQUENTIEL</p><h2>Spectre de phase</h2></div><span id="phaseSummary">—</span></div>
+            <div class="chart-heading">
+              <h2>Spectre de phase</h2>
+              <label class="phase-filter"><input id="significantPhaseOnly" type="checkbox" /> <span>Amplitudes significatives uniquement</span></label>
+            </div>
             <div class="chart-stage spectrum-stage" id="phaseStage"><canvas id="phaseChart"></canvas><output class="chart-tooltip" id="phaseTooltip" hidden></output></div>
           </article>
         </div>
-        <p class="navigation-hint">Molette : zoom horizontal · Glisser : déplacer · Double-clic : réinitialiser. Chaque figure se navigue indépendamment.</p>
       </div>
 
       <aside class="signal-workbench" aria-label="Composition et transformée du signal">
         <section class="workbench-section">
-          <div class="section-heading"><p class="eyebrow">COMPOSITION</p><h2>Signaux</h2></div><p class="python-status" id="pythonStatus">Initialisation du moteur scientifique Python…</p>
+          <div class="section-heading"><h2>Signaux</h2></div>
           <div class="signal-list" id="signalList"></div>
           <button class="secondary-button add-signal" id="addSignal" type="button">+ Ajouter une composante</button>
           <p class="validation" id="signalError" role="alert"></p>
         </section>
 
         <section class="workbench-section transform-settings">
-          <div class="section-heading"><p class="eyebrow">TRANSFORMÉE</p><h2>Informations FFT</h2></div>
+          <div class="section-heading"><h2>Informations FFT</h2></div>
           <dl class="transform-info"><div><dt>Points calculés</dt><dd id="fftPoints">—</dd></div><div><dt>Résolution fréquentielle</dt><dd id="frequencyResolution">—</dd></div><div><dt>Fréquence de Nyquist-Shannon</dt><dd id="nyquistFrequency">—</dd></div></dl>
         </section>
         <button class="secondary-button reset-button" id="resetButton" type="button">Réinitialiser</button>
@@ -77,6 +79,6 @@
     </details>
   </template>
   <script type="module" src="../../shared/components/course-header.js"></script>
-  <script type="module" src="./scripts/app.js?v=20261005"></script>
+  <script type="module" src="./scripts/app.js?v=20261005b"></script>
 </body>
 </html>
