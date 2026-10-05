@@ -3,8 +3,8 @@ let pyodidePromise;
 async function initialize() {
   importScripts(`${PYODIDE_URL}pyodide.js`);
   const pyodide = await loadPyodide({ indexURL: PYODIDE_URL });
-  await pyodide.loadPackage("numpy");
-  const source = await fetch("./scientific.py?v=20261004c").then((response) => response.text());
+  await pyodide.loadPackage(["numpy", "scipy"]);
+  const source = await fetch("./scientific.py?v=20261004d").then((response) => response.text());
   pyodide.runPython(source);
   postMessage({ type: "ready" });
   return pyodide;
@@ -15,11 +15,13 @@ self.onmessage = async ({ data }) => {
   try {
     const pyodide = await pyodidePromise;
     const payload = data.payload;
-    pyodide.globals.set("payload_json", JSON.stringify(payload, (key, value) => key === "samples" ? undefined : value));
-    payload.signals.forEach((signal, index) => { if (signal.samples) pyodide.globals.set(`wav_${index}`, signal.samples); });
+    pyodide.globals.set("payload_json", JSON.stringify(payload, (key, value) => key === "wavBytes" ? undefined : value));
+    payload.signals.forEach((signal, index) => { if (signal.wavBytes) pyodide.globals.set(`wav_${index}`, signal.wavBytes); });
     const result = await pyodide.runPythonAsync(`
 import json
 import js
+import io
+from scipy.io import wavfile
 from pyodide.ffi import to_js
 _payload = json.loads(payload_json)
 for _index, _signal in enumerate(_payload["signals"]):
@@ -29,7 +31,11 @@ for _index, _signal in enumerate(_payload["signals"]):
         # soit directement une vue Python du tampon. Les deux cas sont valides.
         if hasattr(_wav_value, "to_py"):
             _wav_value = _wav_value.to_py()
-        _signal["samples"] = np.asarray(_wav_value, dtype=np.float32).reshape(-1)
+        _wav_rate, _wav_samples = wavfile.read(io.BytesIO(bytes(_wav_value)))
+        if _wav_samples.ndim > 1:
+            _wav_samples = _wav_samples.astype(np.float64).mean(axis=1)
+        _signal["samples"] = np.asarray(_wav_samples).reshape(-1)
+        _signal["sourceSampleRate"] = float(_wav_rate)
 _result = compute(_payload)
 to_js(_result, dict_converter=js.Object.fromEntries)
 `);

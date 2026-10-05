@@ -37,19 +37,10 @@ main { padding-top:14px; }
 .signal-card-heading { display:grid; grid-template-columns:1fr auto; align-items:end; gap:8px; }
 .signal-card .field.full { margin-top:9px; }
 .signal-card .two-fields { margin-top:9px; }
-.signal-name input { font-weight:750; }
 .remove-signal { width:34px; height:38px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--muted); font-size:1.15rem; cursor:pointer; }
 .remove-signal:hover { border-color:var(--danger); color:var(--danger); }
 .add-signal { justify-content:center; width:100%; margin-top:10px; }
 .signal-workbench .validation { margin:8px 0 0; }
-.transform-choice { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin:0 0 13px; padding:0; border:0; }
-.transform-choice legend { grid-column:1/-1; margin-bottom:1px; color:#43536a; font-size:.82rem; font-weight:800; }
-.transform-choice label { cursor:pointer; }
-.transform-choice input { position:absolute; opacity:0; }
-.transform-choice span { display:flex; flex-direction:column; min-height:52px; padding:9px 10px; border:1px solid var(--line); border-radius:7px; background:#f7f9fc; font-size:.84rem; font-weight:800; }
-.transform-choice small { margin-top:2px; color:var(--muted); font-size:.68rem; font-weight:500; }
-.transform-choice input:checked + span { border-color:var(--signal-green); background:#eaf6f2; color:#0f7256; box-shadow:inset 3px 0 0 var(--signal-green); }
-.transform-settings .check { margin:10px 0; }
 .transform-info { margin:13px 0 0; }
 .transform-info div { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-top:1px solid #e7edf3; font-size:.76rem; }
 .transform-info dt { color:var(--muted); }

@@ -12,7 +12,11 @@ def _function(signal, times):
         elif kind == "cosine": values = np.cos(phase)
         elif kind == "square": values = np.where(np.sin(phase) >= 0, 1.0, -1.0)
         else: values = (2 / np.pi) * np.arcsin(np.sin(phase))
-    elif kind == "gate": values = np.ones(times.size)
+    elif kind == "gate":
+        values = (
+            (times >= float(signal.get("gateStart", 0)))
+            & (times < float(signal.get("gateEnd", 0)))
+        ).astype(np.float64)
     else: values = (times >= 0).astype(np.float64)
     return amplitude * values + offset
 
@@ -58,6 +62,8 @@ def compute(payload):
     for signal in signals:
         start, end = float(signal["start"]), float(signal["end"])
         if end <= start: raise ValueError(f"{signal['code']} : la fin doit être supérieure au début")
+        if signal["definition"] == "function" and signal["type"] == "gate" and float(signal["gateEnd"]) <= float(signal["gateStart"]):
+            raise ValueError(f"{signal['code']} : la fin de la porte doit être supérieure à son début")
         sample_rate = float(signal["sampleRate"])
         if sample_rate <= 0: raise ValueError(f"{signal['code']} : la fréquence d’échantillonnage doit être positive")
         sample_period = 1 / sample_rate

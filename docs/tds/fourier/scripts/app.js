@@ -5,7 +5,7 @@ const elements = Object.fromEntries(["pythonStatus","signalList","addSignal","si
 const timeChart = createChart({ stage: byId("timeStage"), canvas: byId("timeChart"), tooltip: byId("timeTooltip"), xLabel: "Temps (s)", yLabel: () => "Amplitude" });
 const amplitudeChart = createChart({ stage: byId("amplitudeStage"), canvas: byId("amplitudeChart"), tooltip: byId("amplitudeTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => "Amplitude" });
 const phaseChart = createChart({ stage: byId("phaseStage"), canvas: byId("phaseChart"), tooltip: byId("phaseTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => "Phase (rad)" });
-const worker = new Worker("./scripts/scientific-worker.js?v=20261004c");
+const worker = new Worker("./scripts/scientific-worker.js?v=20261004d");
 let signals = [], updateTimer = null, requestId = 0, pythonReady = false;
 const numeric = (input, fallback = 0) => {
   const value = input ? Number(input.value) : Number.NaN;
@@ -17,6 +17,7 @@ function updateCardVisibility(card, signal) {
   card.querySelector(".wav-definition").hidden = signal.definition !== "wav";
   card.querySelector(".combination-definition").hidden = signal.definition !== "combination";
   card.querySelector(".periodic-fields").hidden = !["sine", "cosine", "square", "triangle"].includes(signal.type);
+  card.querySelector(".gate-fields").hidden = signal.type !== "gate";
 }
 function closeOtherCards(opened) { elements.signalList.querySelectorAll(".signal-card").forEach((card) => { if (card !== opened) card.open = false; }); }
 function bindField(card, signal, field) {
@@ -39,7 +40,7 @@ function renderSignals(openId = null) {
     combinationOption.disabled = index === 0;
     if (index === 0 && signal.definition === "combination")
       signal.definition = "function";
-    for (const field of ["visible","definition","type","frequency","delay","sampleRate","amplitude","offset","expression","start","end"]) bindField(card, signal, field);
+    for (const field of ["visible","definition","type","frequency","delay","gateStart","gateEnd","sampleRate","amplitude","offset","expression","start","end"]) bindField(card, signal, field);
     card.querySelector("[data-summary-code]").textContent = signal.code; card.querySelector("[data-card-code]").textContent = signal.code;
     const available = signals.slice(0, index).map(({ code }) => code); card.querySelector("[data-expression-help]").textContent = available.length ? `Signaux disponibles : ${available.join(", ")}. Opérateurs : +, −, * et parenthèses.` : "Aucun signal précédent n’est disponible pour cette combinaison.";
     const visibility = card.querySelector(".visibility-toggle"); visibility.addEventListener("click", (event) => event.stopPropagation());
