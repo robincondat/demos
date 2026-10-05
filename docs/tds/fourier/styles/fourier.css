@@ -1,0 +1,72 @@
+:root { --color-primary:#168665; --signal-green:#168665; }
+course-header.course-header { --header-background:#168665; --header-border:#0f7256; box-shadow:0 4px 16px #0f72562b; }
+course-header .course-identity span { color:#e7fff7; }
+main { padding-top:14px; }
+.signal-layout { display:grid; grid-template-columns:minmax(0, 1fr) minmax(330px, 380px); gap:14px; align-items:start; }
+.charts-workspace { min-width:0; }
+.chart-panel { min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:0 2px 12px #18375f0a; }
+.chart-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; min-height:65px; padding:10px 14px; border-bottom:1px solid var(--line); }
+.chart-heading h2 { margin:0; font-size:.94rem; }
+.phase-filter { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:.72rem; font-weight:650; cursor:pointer; }
+.phase-filter input { margin:0; accent-color:var(--signal-green); }
+.chart-stage { position:relative; height:clamp(285px, 30vw, 440px); overflow:hidden; cursor:crosshair; background:#fff; touch-action:none; }
+.chart-stage.dragging { cursor:grabbing; }
+.chart-stage canvas { display:block; width:100%; height:100%; }
+.spectra-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+.spectrum-stage { height:clamp(250px, 24vw, 350px); }
+.chart-empty { position:absolute; inset:0; display:grid; place-items:center; padding:20px; color:var(--muted); font-size:.88rem; pointer-events:none; }
+.chart-tooltip { position:absolute; z-index:4; display:flex; flex-direction:column; gap:4px; max-width:260px; padding:8px 10px; border:1px solid #cfd9e5; border-radius:7px; background:#fffffff2; box-shadow:0 5px 18px #173b3524; color:var(--text); font-size:.72rem; pointer-events:none; }
+.chart-tooltip strong { margin-bottom:2px; }
+.chart-tooltip span { display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.chart-tooltip i { width:8px; height:8px; border-radius:50%; }
+.signal-workbench { position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; padding:16px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:0 2px 12px #18375f0d; scrollbar-width:thin; }
+.workbench-section { padding:0 0 17px; border-bottom:1px solid var(--line); }
+.workbench-section + .workbench-section { padding-top:17px; }
+.section-heading h2 { margin:0 0 13px; font-size:1rem; }
+.two-fields { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:9px; }
+.input-unit { display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center; overflow:hidden; border:1px solid #cbd6e3; border-radius:6px; background:#fff; }
+.input-unit input { min-width:0; border:0 !important; }
+.input-unit > span { padding:0 9px; color:var(--muted); font-size:.72rem; font-weight:750; }
+.signal-workbench .field span { color:#43536a; }
+.signal-workbench .field input, .signal-workbench .field select { background:#fff; color:var(--text); border-color:#cbd6e3; border-radius:6px; }
+.sampling-info { margin:10px 0 0; color:var(--muted); font-size:.75rem; }
+.signal-list { display:grid; gap:10px; }
+.signal-card { position:relative; padding:11px; border:1px solid var(--line); border-left:4px solid var(--signal-color); border-radius:8px; background:#f8fafc; }
+.signal-card-heading { display:grid; grid-template-columns:1fr auto; align-items:end; gap:8px; }
+.signal-card .field.full { margin-top:9px; }
+.signal-card .two-fields { margin-top:9px; }
+.remove-signal { width:34px; height:38px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--muted); font-size:1.15rem; cursor:pointer; }
+.remove-signal:hover { border-color:var(--danger); color:var(--danger); }
+.add-signal { justify-content:center; width:100%; margin-top:10px; }
+.signal-workbench .validation { margin:8px 0 0; }
+.transform-info { margin:13px 0 0; }
+.transform-info div { display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-top:1px solid #e7edf3; font-size:.76rem; }
+.transform-info dt { color:var(--muted); }
+.transform-info dd { margin:0; font-weight:750; text-align:right; }
+.signal-workbench > .reset-button { width:100%; margin-top:15px; }
+@media (max-width:1100px) { .signal-layout { grid-template-columns:1fr; } .signal-workbench { position:static; max-height:none; } }
+@media (max-width:760px) { .spectra-grid { grid-template-columns:1fr; } .chart-stage, .spectrum-stage { height:300px; } }
+@media (max-width:520px) { .two-fields { grid-template-columns:1fr; } .chart-heading { align-items:flex-start; flex-direction:column; gap:6px; } }
+.signal-card { padding:0; }
+.signal-card > summary { display:grid; grid-template-columns:auto minmax(0, 1fr) auto auto; align-items:center; gap:8px; padding:11px; cursor:pointer; list-style:none; }
+.signal-card > summary::-webkit-details-marker { display:none; }
+.signal-card > summary::after { content:"⌄"; color:var(--muted); grid-column:4; }
+.signal-card:not([open]) > summary::after { transform:rotate(-90deg); }
+.signal-color { width:9px; height:9px; border-radius:50%; background:var(--signal-color); }
+.signal-card > summary strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.82rem; }
+.signal-card > summary strong,
+.signal-identifier { color:#0f7256; font-weight:850; }
+.signal-card-content { padding:0 11px 11px; border-top:1px solid var(--line); }
+.signal-card-content .signal-card-heading { padding-top:10px; }
+.signal-card .common-fields { margin-top:9px; }
+.visibility-toggle { display:flex; align-items:center; gap:5px; cursor:pointer; color:var(--muted); font-size:.68rem; font-weight:750; }
+.visibility-toggle input { margin:0; accent-color:var(--signal-green); }
+.definition-panel { margin-top:10px; padding-top:1px; }
+.sampling-rate-field { margin-top:11px !important; }
+.interval-fields { margin-top:11px; padding-top:11px; border-top:1px solid var(--line); }
+.wav-drop { display:flex; flex-direction:column; gap:3px; padding:12px; border:1px dashed #aebdca; border-radius:7px; background:#fff; cursor:pointer; text-align:center; }
+.wav-drop input { position:absolute; opacity:0; pointer-events:none; }
+.wav-drop strong { color:var(--signal-green); font-size:.8rem; }
+.wav-drop span { overflow:hidden; color:var(--muted); font-size:.7rem; text-overflow:ellipsis; white-space:nowrap; }
+.expression-help { margin:7px 0 0; color:var(--muted); font-size:.7rem; line-height:1.4; }
+@media (max-width:520px) { .visibility-toggle span { display:none; } }
