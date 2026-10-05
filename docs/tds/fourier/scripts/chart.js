@@ -4,6 +4,38 @@ const format = (value) => {
   if (absolute && (absolute >= 1e4 || absolute < 1e-3)) return value.toExponential(3);
   return Number(value.toPrecision(5)).toString();
 };
+
+/**
+ * Réduit une série dense sans perdre ses extrema locaux.
+ *
+ * Un échantillonnage régulier par pas peut entièrement sauter une raie FFT
+ * étroite. Chaque colonne conserve donc les indices de son minimum et de son
+ * maximum, dans leur ordre temporel/fréquentiel d'origine.
+ */
+export function peakPreservingIndices(values, start, end, targetBuckets) {
+  const count = Math.max(0, end - start),
+    buckets = Math.max(1, Math.floor(targetBuckets));
+  if (count <= buckets * 2)
+    return Array.from({ length: count }, (_, index) => start + index);
+  const indices = [];
+  for (let bucket = 0; bucket < buckets; bucket++) {
+    const from = start + Math.floor((bucket * count) / buckets),
+      to = start + Math.floor(((bucket + 1) * count) / buckets);
+    if (from >= to) continue;
+    let minIndex = from,
+      maxIndex = from;
+    for (let index = from + 1; index < to; index++) {
+      if (values[index] < values[minIndex]) minIndex = index;
+      if (values[index] > values[maxIndex]) maxIndex = index;
+    }
+    const first = Math.min(minIndex, maxIndex),
+      second = Math.max(minIndex, maxIndex);
+    if (indices.at(-1) !== first) indices.push(first);
+    if (second !== first) indices.push(second);
+  }
+  return indices;
+}
+
 export function createChart({ stage, canvas, tooltip, xLabel, yLabel }) {
   let series = [], fullMin = 0, fullMax = 1, viewMin = 0, viewMax = 1, drag = null;
   const margins = { left: 62, right: 18, top: 18, bottom: 42 };
@@ -41,9 +73,15 @@ export function createChart({ stage, canvas, tooltip, xLabel, yLabel }) {
     const mapX = (value) => margins.left + ((value - viewMin) / (viewMax - viewMin)) * plotWidth, mapY = (value) => margins.top + ((yMax - value) / (yMax - yMin)) * plotHeight;
     context.save(); context.beginPath(); context.rect(margins.left, margins.top, plotWidth, plotHeight); context.clip();
     for (const item of series) {
-      const start = Math.max(0, lowerBound(item.x, viewMin) - 1), end = Math.min(item.x.length, lowerBound(item.x, viewMax) + 1), step = Math.max(1, Math.floor((end - start) / (plotWidth * 2)));
+      const start = Math.max(0, lowerBound(item.x, viewMin) - 1),
+        end = Math.min(item.x.length, lowerBound(item.x, viewMax) + 1),
+        visibleIndices = peakPreservingIndices(item.y, start, end, plotWidth);
       context.beginPath(); context.strokeStyle = item.color; context.lineWidth = item.width || 1.5;
-      for (let i = start, first = true; i < end; i += step) { const x = mapX(item.x[i]), y = mapY(item.y[i]); if (first) { context.moveTo(x, y); first = false; } else context.lineTo(x, y); }
+      visibleIndices.forEach((index, position) => {
+        const x = mapX(item.x[index]), y = mapY(item.y[index]);
+        if (position === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      });
       context.stroke();
     }
     context.restore(); context.strokeStyle = "#aebac9"; context.strokeRect(margins.left + .5, margins.top + .5, plotWidth, plotHeight);

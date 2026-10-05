@@ -1,4 +1,4 @@
-import { createChart } from "./chart.js";
+import { createChart } from "./chart.js?v=20261005";
 import { decodeWav, makeSignal, palette } from "./signals.js";
 const byId = (id) => document.getElementById(id);
 const elements = Object.fromEntries(["pythonStatus","signalList","addSignal","signalError","fftPoints","frequencyResolution","nyquistFrequency","signalSummary","amplitudeSummary","phaseSummary","resetButton","signalTemplate"].map((id) => [id, byId(id)]));
