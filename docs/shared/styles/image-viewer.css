@@ -15,6 +15,8 @@
   cursor: grabbing;
 }
 .canvas-stage canvas {
+  /* Chaque pixel reste un carré net, même après le zoom CSS synchronisé. */
+  image-rendering: pixelated;
   position: absolute;
   left: 0;
   top: 0;

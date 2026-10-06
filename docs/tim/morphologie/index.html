@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Explorez la morphologie mathématique sur des images binaires et créez vos éléments structurants."
+    />
+    <title>TIM - Morphologie mathématique</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101a2c'/%3E%3Cg fill='%234fd1c5'%3E%3Crect x='12' y='12' width='11' height='11' rx='2'/%3E%3Crect x='27' y='12' width='11' height='11' rx='2'/%3E%3Crect x='42' y='12' width='11' height='11' rx='2'/%3E%3Crect x='12' y='27' width='11' height='11' rx='2'/%3E%3Crect x='27' y='27' width='11' height='11' rx='2' fill='%23f3b743'/%3E%3Crect x='42' y='27' width='11' height='11' rx='2'/%3E%3Crect x='12' y='42' width='11' height='11' rx='2'/%3E%3Crect x='27' y='42' width='11' height='11' rx='2'/%3E%3Crect x='42' y='42' width='11' height='11' rx='2'/%3E%3C/g%3E%3C/svg%3E"
+    />
+    <!-- Composants communs à tous les démonstrateurs TIM. -->
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/image-viewer.css" />
+    <link rel="stylesheet" href="../../shared/styles/theme.css" />
+    <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+    <!-- Ajustements propres au démonstrateur de morphologie. -->
+    <link rel="stylesheet" href="./styles/morphologie.css" />
+  </head>
+  <body>
+    <!-- Le titre est configurable indépendamment pour chaque démonstrateur. -->
+    <course-header
+      page-title="Morphologie mathématique"
+      course-code="TIM"
+      course-name="Traitement d’Images"
+      instructor="Robin Condat"
+    ></course-header>
+    <div class="runtime" aria-live="polite">
+      <span id="runtimeDot"></span
+      ><span id="runtimeText">Chargement d’OpenCV…</span>
+    </div>
+
+    <main>
+      <!-- Chargement et export de l'image -->
+      <section class="upload-row" aria-label="Chargement de l’image">
+        <label class="file-button" for="imageInput">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5" />
+          </svg>
+          Charger une image
+        </label>
+        <input
+          id="imageInput"
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.pbm,.pgm,.ppm,image/jpeg,image/png,image/webp,image/bmp,image/tiff"
+        />
+        <div class="file-meta">
+          <strong id="fileName">Aucune image chargée</strong>
+          <span id="imageMeta"
+            >JPEG, PNG, WebP, BMP, TIFF, PBM, PGM ou PPM</span
+          >
+        </div>
+        <button
+          id="downloadButton"
+          class="secondary-button"
+          type="button"
+          disabled
+        >
+          Télécharger le résultat
+        </button>
+      </section>
+
+      <!-- Espace de travail : visualisation à gauche, paramètres à droite -->
+      <div class="workspace-layout">
+        <div class="visual-workspace">
+          <!-- Comparaison originale / résultat -->
+          <section class="comparison" aria-label="Comparaison des images">
+            <article class="image-panel">
+              <div class="panel-heading">
+                <h2>Image originale · binarisée</h2>
+                <span id="originalBadge" hidden>—</span>
+              </div>
+              <div class="canvas-stage empty" id="originalStage">
+                <canvas id="originalCanvas"></canvas>
+                <div class="empty-state">
+                  <p>Chargez une image pour commencer</p>
+                </div>
+              </div>
+            </article>
+            <article class="image-panel">
+              <div class="panel-heading">
+                <h2>Image traitée</h2>
+                <span id="resultBadge" hidden>—</span>
+              </div>
+              <div class="canvas-stage empty" id="resultStage">
+                <canvas id="resultCanvas"></canvas>
+                <div class="empty-state"><p>Le résultat apparaîtra ici</p></div>
+                <div class="processing" id="processing" hidden>Calcul…</div>
+              </div>
+            </article>
+          </section>
+
+
+          <section class="display-tools" aria-label="Binarisation et navigation">
+            <div class="display-settings">
+              <div class="display-settings-heading"><strong>Binarisation de l’image originale</strong></div>
+              <div class="field"><span>Seuil (0–255)</span><div class="threshold-fields">
+                <input id="thresholdSlider" type="range" min="0" max="255" value="127" aria-label="Seuil de binarisation" />
+                <input id="threshold" type="number" min="0" max="255" step="1" value="127" aria-label="Valeur du seuil" />
+              </div></div>
+              <label class="check"><input id="invert" type="checkbox" /><span>Inverser le noir et le blanc</span></label>
+            </div>
+                        <div
+              class="view-toolbar"
+              aria-label="Navigation synchronisée dans les images"
+            >
+              <div class="view-toolbar-heading">
+                <strong>Navigation</strong>
+              </div>
+              <div class="zoom-controls">
+                <input
+                  id="zoomSlider"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="384"
+                  aria-label="Niveau de zoom"
+                  disabled
+                />
+                <output id="zoomLabel" for="zoomSlider" aria-live="polite"
+                  >100 %</output
+                >
+                <button id="fitView" type="button" disabled>Ajuster</button>
+              </div>
+            </div>
+
+
+          </section>
+                    <section class="analysis-strip" aria-label="Analyse des images">
+            <article class="analysis-panel image-information">
+              <h2>Informations sur l’image</h2>
+              <dl>
+                <div>
+                  <dt>Dimensions</dt>
+                  <dd id="infoDimensions">—</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd id="infoType">—</dd>
+                </div>
+                <div>
+                  <dt>Valeurs binaires</dt>
+                  <dd id="infoOriginalRange">—</dd>
+                </div>
+                <div>
+                  <dt>Taille du fichier</dt>
+                  <dd id="infoFileSize">—</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="analysis-panel cursor-information">
+              <h2>Valeurs sous le curseur</h2>
+              <dl>
+                <div>
+                  <dt>Position</dt>
+                  <dd id="cursorPosition">—</dd>
+                </div>
+                <div>
+                  <dt>Binarisée</dt>
+                  <dd id="cursorOriginal">—</dd>
+                </div>
+                <div>
+                  <dt>Traitée</dt>
+                  <dd id="cursorResult">—</dd>
+                </div>
+                <div>
+                  <dt>Différence</dt>
+                  <dd id="cursorDifference">—</dd>
+                </div>
+              </dl>
+            </article>
+
+
+          </section>
+        </div>
+        <aside class="workbench" aria-label="Paramètres de morphologie mathématique">
+          <div class="section-title"><div><h2>Choisir l’opération</h2></div></div>
+          <fieldset class="filter-options morphology-options"><legend class="sr-only">Opération morphologique</legend>
+            <label><input type="radio" name="operation" value="erode" checked/><span><b>Érosion</b></span></label>
+<label><input type="radio" name="operation" value="dilate" /><span><b>Dilatation</b></span></label>
+<label><input type="radio" name="operation" value="open" /><span><b>Ouverture</b></span></label>
+<label><input type="radio" name="operation" value="close" /><span><b>Fermeture</b></span></label>
+<label><input type="radio" name="operation" value="gradient" /><span><b>Gradient</b></span></label>
+<label><input type="radio" name="operation" value="tophat" /><span><b>Top Hat</b></span></label>
+<label><input type="radio" name="operation" value="blackhat" /><span><b>Black Hat</b></span></label>
+<label><input type="radio" name="operation" value="hitmiss" /><span><b>Hit or Miss</b></span></label>
+          </fieldset>
+          <div class="parameter-content morphology-parameters">
+            <section class="parameter-section">
+              <div class="parameter-heading"><h3>Élément structurant</h3></div>
+              <fieldset class="filter-options shape-options"><legend class="sr-only">Forme de l’élément structurant</legend>
+                <label><input type="radio" name="shape" value="rectangle" checked /><span><b>Rectangle</b></span></label>
+                <label><input type="radio" name="shape" value="cross" /><span><b>Croix</b></span></label>
+                <label><input type="radio" name="shape" value="ellipse" /><span><b>Ellipse</b></span></label>
+                <label><input type="radio" name="shape" value="diamond" /><span><b>Diamant</b></span></label>
+                <label><input type="radio" name="shape" value="custom" /><span><b>Personnalisé</b></span></label>
+              </fieldset>
+              <div class="shape-parameters">
+                <div class="inline-fields" data-shape-controls="preset">
+                  <label class="field shape-size"><span>Largeur</span><input id="shapeWidth" type="number" min="1" max="31" step="1" value="3" aria-label="Largeur de l’élément structurant" /></label>
+                  <span class="multiply" aria-hidden="true">×</span>
+                  <label class="field shape-size"><span>Hauteur</span><input id="shapeHeight" type="number" min="1" max="31" step="1" value="3" aria-label="Hauteur de l’élément structurant" /></label>
+                </div>
+                <div data-shape-controls="custom" hidden>
+                  <button id="openKernelEditor" class="secondary-button kernel-editor-trigger" type="button">Modifier l’élément…</button>
+                </div>
+              </div>
+              <div class="kernel-preview-frame"><canvas id="kernelPreview" role="img" aria-label="Élément structurant appliqué"></canvas></div>
+            </section>
+            <section class="parameter-section">
+              <div class="parameter-heading"><h3>Gestion des bords</h3></div>
+              <label class="field full"><span>Méthode</span><select id="borderType">
+                <option value="neutral">Constante neutre (OpenCV)</option><option value="constant">Constante personnalisée</option>
+                <option value="replicate">Réplication</option><option value="reflect">Réflexion</option><option value="reflect101">Réflexion 101</option>
+              </select></label>
+              <label id="borderValueField" class="field full" hidden><span>Valeur du bord</span><select id="borderValue"><option value="0">Noir (0)</option><option value="255">Blanc (255)</option></select></label>
+              <div class="border-preview"><span>Aperçu du prolongement</span><div class="border-demo" id="borderDemo" aria-live="polite"></div></div>
+            </section>
+          </div>
+          <p id="status" class="validation" role="alert"></p>
+          <div class="footer-actions"><button id="resetButton" class="secondary-button reset-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68" /></svg><span>Réinitialiser les paramètres</span></button></div>
+        </aside>
+      </div>
+    </main>
+    <dialog id="kernelDialog" class="kernel-dialog" aria-labelledby="kernelDialogTitle">
+      <div class="kernel-dialog-heading"><div><p class="eyebrow">MORPHOLOGIE</p><h2 id="kernelDialogTitle">Élément structurant</h2></div><button id="closeKernelDialogIcon" class="dialog-close-icon" type="button" aria-label="Fermer">×</button></div>
+      <div class="kernel-dialog-size"><div><span class="kernel-dialog-size-title">Dimensions</span></div>
+        <label class="field"><span>Largeur</span><input id="kernelWidth" type="number" min="1" max="31" step="1" value="3" /></label><span class="multiply">×</span>
+        <label class="field"><span>Hauteur</span><input id="kernelHeight" type="number" min="1" max="31" step="1" value="3" /></label>
+      </div>
+      
+      <p id="dimensionError" class="validation kernel-dialog-dimension-error" role="alert"></p>
+      <div id="kernelGrid" class="kernel-table-scroll"></div>
+      <div class="kernel-dialog-footer"><button id="zeroKernel" class="secondary-button" type="button">Remettre à zéro</button></div>
+    </dialog>
+    <canvas id="sourceCanvas" hidden></canvas>
+    <script>
+      window.Module = { onRuntimeInitialized() { window.dispatchEvent(new Event("opencv-ready")); } };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+    <script id="opencvScript" async src="https://docs.opencv.org/4.x/opencv.js"></script>
+    <script type="module" src="../../shared/components/course-header.js"></script>
+    <script type="module" src="./scripts/app.js"></script>
+  </body>
+</html>

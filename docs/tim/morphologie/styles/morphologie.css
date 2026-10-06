@@ -1,0 +1,33 @@
+.display-tools { grid-template-columns: minmax(0, 1fr) minmax(210px, .65fr); }
+.threshold-fields { display: grid; grid-template-columns: 1fr 78px; gap: 12px; align-items: center; }
+.threshold-fields input[type="range"] { width: 100%; accent-color: var(--aqua); }
+.analysis-strip { grid-template-columns: 1fr 1fr; }
+.analysis-panel:last-child { border-right: 0; }
+.morphology-options { grid-template-columns: 1fr 1fr; }
+.morphology-parameters { display: flex; flex-direction: column; }
+.morphology-parameters .parameter-section { border-right: 0; border-bottom: 1px solid var(--line); padding: 14px 0; }
+.morphology-parameters .parameter-section:last-child { border-bottom: 0; }
+.kernel-cell[data-color="black"] { background: #111; color: white; }
+.kernel-cell[data-color="gray"] { background: #929292; color: #111; }
+.kernel-cell[data-color="white"] { background: white; color: #111; }
+.kernel-cell { display: block; width: 40px; height: 40px; border: 1px solid #64748b; border-radius: 4px; cursor: pointer; font: inherit; font-size: .7rem; }
+.kernel-cell:focus-visible { outline: 3px solid #087ee6; outline-offset: 2px; }
+.morphology-table { border-spacing: 3px; margin: auto; }
+.morphology-table td { padding: 0; }
+.kernel-dialog-footer { display: flex; justify-content: flex-start; }
+.shape-options { grid-template-columns: 1fr 1fr; }
+.shape-options label:last-child { grid-column: 1 / -1; }
+.shape-parameters { margin-top: 14px; }
+.shape-size { margin: 0; min-width: 0; }
+.shape-size input { width: 100%; }
+.shape-parameters .kernel-editor-trigger { margin-top: 0; }
+.kernel-preview-frame { width: 100%; height: 190px; padding: 10px; margin-top: 16px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel2); }
+#kernelPreview { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+#status { margin: 10px 0 0; }
+#status:empty { display: none; }
+.upload-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+.display-settings-heading strong { white-space: normal; }
+.runtime { margin: 8px auto 0; width: min(1600px, calc(100% - 40px)); }
+@media (max-width: 1180px) { .morphology-parameters { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; } }
+@media (max-width: 850px) { .display-tools, .analysis-strip, .morphology-parameters { grid-template-columns: 1fr; } .display-tools > .view-toolbar { grid-column: auto; grid-row: auto; } }
+@media (max-width: 560px) { .upload-row { grid-template-columns: 1fr; } }
