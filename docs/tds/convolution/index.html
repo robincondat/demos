@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Définissez un signal et une réponse impulsionnelle, puis explorez leur convolution discrète en modes full, same et valid." />
+  <title>TDS - Convolution de deux signaux</title>
+  <link rel="stylesheet" href="../../shared/styles/base.css" />
+  <link rel="stylesheet" href="../../shared/styles/theme.css" />
+  <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" />
+  <link rel="stylesheet" href="./styles/convolution.css?v=20261019-convolution1" />
+</head>
+<body>
+  <course-header page-title="Convolution de deux signaux" course-code="TDS" course-name="Traitement du signal" instructor="Robin Condat"></course-header>
+  <main><div class="signal-layout"><div class="charts-workspace"><article class="chart-panel"><div class="chart-heading"><h2>Signal à convoluer</h2></div><div class="chart-stage" id="inputStage"><canvas id="inputChart"></canvas><output class="chart-tooltip" id="inputTooltip" hidden></output><div class="chart-empty" id="inputEmpty">Créez un signal ou chargez un WAV.</div></div></article>
+<article class="chart-panel"><div class="chart-heading"><h2>Réponse impulsionnelle</h2></div><div class="chart-stage" id="impulseStage"><canvas id="impulseChart"></canvas><output class="chart-tooltip" id="impulseTooltip" hidden></output><div class="chart-empty" id="impulseEmpty">Définissez la réponse impulsionnelle.</div></div></article>
+<article class="chart-panel"><div class="chart-heading"><h2>Résultat de la convolution</h2></div><div class="chart-stage" id="outputStage"><canvas id="outputChart"></canvas><output class="chart-tooltip" id="outputTooltip" hidden></output><div class="chart-empty" id="outputEmpty">Définissez les deux signaux pour calculer leur convolution.</div></div></article></div><aside class="signal-workbench" aria-label="Paramètres de convolution"><section class="workbench-section" data-slot="input"><div class="section-heading"><h2>Signal</h2></div><div class="signal-list" id="inputList"></div><div class="signal-actions" id="inputActions"><button class="secondary-button" data-create="input" type="button">Créer un signal</button><button class="secondary-button" data-load="input" type="button">Charger un signal WAV</button></div><input id="inputWav" type="file" accept=".wav,audio/wav,audio/x-wav" hidden /><p class="validation" id="inputError" role="alert"></p></section>
+<section class="workbench-section" data-slot="impulse"><div class="section-heading"><h2>Réponse impulsionnelle</h2></div><div class="signal-list" id="impulseList"></div><div class="signal-actions" id="impulseActions"><button class="secondary-button" data-create="impulse" type="button">Créer un signal</button><button class="secondary-button" data-load="impulse" type="button">Charger un signal WAV</button></div><input id="impulseWav" type="file" accept=".wav,audio/wav,audio/x-wav" hidden /><p class="validation" id="impulseError" role="alert"></p></section>
+<section class="workbench-section"><div class="section-heading"><h2>Convolution</h2></div><fieldset class="filter-options convolution-options"><legend class="sr-only">Mode de convolution</legend><label><input type="radio" name="mode" value="full" checked aria-describedby="modeDescription" /><span><b>full</b></span></label><label><input type="radio" name="mode" value="same"  aria-describedby="modeDescription" /><span><b>same</b></span></label><label><input type="radio" name="mode" value="valid"  aria-describedby="modeDescription" /><span><b>valid</b></span></label></fieldset><p id="modeDescription" class="mode-description" aria-live="polite"></p><p class="sampling-info">Convolution discrète : somme des produits, sans facteur 1/fe. Les deux signaux doivent avoir la même fréquence d’échantillonnage.</p><p id="signalError" class="validation" role="alert"></p><p id="engineStatus" class="sampling-info" role="status">Chargement du moteur de calcul…</p></section><button class="secondary-button reset-button" id="resetButton" type="button">Réinitialiser</button></aside></div></main>
+  <template id="signalTemplate">
+    <details class="signal-card">
+      <summary>
+        <i class="signal-color"></i><strong data-summary-code>S1</strong>
+      </summary>
+      <div class="signal-card-content">
+        <div class="signal-card-heading"><input class="signal-name-input" data-field="name" type="text" aria-label="Nom du signal" title="Modifier le nom du signal" placeholder="Nom du signal" /><button class="remove-signal" type="button" aria-label="Supprimer ce signal">×</button></div>
+        <button class="secondary-button equation-button" data-equation-button type="button">Saisir l’équation</button>
+        <div class="equation-formula" data-equation-formula hidden></div>
+        <div class="period-formula" data-period-formula hidden></div>
+        <div class="equation-parameters two-fields" data-equation-parameters hidden></div>
+        <label class="field full sampling-rate-field"><span>Fréquence d’échantillonnage</span><div class="input-unit"><input data-field="sampleRate" type="number" min="0.001" step="1" value="1000" /><span>Hz</span></div></label>
+        <div class="two-fields interval-fields"><label class="field"><span>Début du signal</span><div class="input-unit"><input data-field="start" type="number" step="0.01" value="0" /><span>s</span></div></label><label class="field"><span>Fin du signal</span><div class="input-unit"><input data-field="end" type="number" step="0.01" value="1" /><span>s</span></div></label></div>
+      </div>
+    </details>
+  </template>
+  <dialog id="equationDialog" class="equation-dialog" aria-labelledby="equationDialogTitle">
+    <div class="equation-dialog-heading"><h2 id="equationDialogTitle">Équation du signal</h2><div class="equation-heading-actions"><button id="toggleFunctionCatalog" class="secondary-button catalog-toggle" type="button" aria-expanded="false" aria-controls="functionCatalog">ƒx Fonctions</button><button id="closeEquation" class="dialog-close-icon" type="button" aria-label="Fermer">×</button></div></div>
+    <div class="equation-dialog-content">
+      <fieldset class="filter-options equation-mode-options"><legend class="sr-only">Mode de définition</legend>
+        <label><input type="radio" name="equationMode" value="single" checked /><span><b>Expression unique</b></span></label>
+        <label><input type="radio" name="equationMode" value="cases" /><span><b>Définition par cas</b></span></label>
+      </fieldset>
+      <section id="functionCatalog" class="function-catalog" aria-label="Catalogue des fonctions" hidden>
+        <div class="catalog-search-row"><input id="catalogSearch" type="search" placeholder="Rechercher une fonction, une constante…" aria-label="Rechercher dans le catalogue" /><select id="catalogCategory" aria-label="Catégorie du catalogue"><option value="">Toutes les catégories</option></select><button id="closeFunctionCatalog" class="dialog-close-icon" type="button" aria-label="Fermer le catalogue">×</button></div>
+        <div id="catalogResults" class="catalog-results"></div><p id="catalogEmpty" hidden>Aucun résultat.</p>
+      </section>
+      <div id="singleEquationPanel"><label class="field full"><span>Équation en fonction de t</span><textarea id="equationInput" rows="3" spellcheck="false" placeholder="A * cos(2*pi*f0*t)"></textarea></label></div>
+      <div id="piecewiseEquationPanel" hidden>
+        <div class="piecewise-editor">
+          <svg class="piecewise-brace" viewBox="0 0 20 100" preserveAspectRatio="none" aria-hidden="true"><path d="M18 1 C8 1 8 5 8 14 L8 40 C8 47 5 50 1 50 C5 50 8 53 8 60 L8 86 C8 95 8 99 18 99" /></svg>
+          <div class="piecewise-lines"><div id="equationCases"></div>
+            <div class="piecewise-row otherwise-row"><label class="field"><span class="sr-only">Expression sinon</span><input id="equationOtherwise" type="text" value="0" spellcheck="false" aria-label="Expression sinon" /></label><span class="case-keyword">sinon</span></div>
+          </div>
+        </div>
+        <button id="addEquationCase" class="secondary-button" type="button">+ Ajouter un cas</button>
+        <p class="piecewise-hint">Conditions libres, par exemple <code>0 &lt;= t &lt; T/2</code> ou <code>t &lt; 0 ou t &gt; 1</code>. La première condition satisfaite s’applique.</p>
+      </div>
+      <section class="periodic-settings">
+        <label class="check"><input id="periodicEnabled" type="checkbox" /><span>Périodique</span></label>
+        <div id="periodicOptions" hidden>
+          <label class="period-field"><span>T =</span><input id="periodExpression" type="text" value="T" spellcheck="false" placeholder="T ou 1/f0" aria-label="Période T en secondes" /><span>s</span></label>
+          <fieldset class="filter-options period-origin-options"><legend class="sr-only">Intervalle du motif</legend>
+            <label><input type="radio" name="periodOrigin" value="zero" checked /><span><b>[0, T[</b></span></label>
+            <label><input type="radio" name="periodOrigin" value="centered" /><span><b>[−T/2, T/2[</b></span></label>
+          </fieldset>
+        </div>
+      </section>
+      <div class="function-context-slot"><div id="functionContext" class="function-context" role="status" aria-live="polite" hidden></div></div>
+      <div class="equation-preview" id="equationPreview" aria-label="Aperçu de l’équation" aria-live="polite"></div>
+      <p class="validation" id="equationError" role="alert"></p>
+      <div class="equation-variable-hint" id="equationVariables" aria-label="Paramètres à définir"></div>
+      <section id="equationReferenceSection"><h3>Signaux disponibles</h3><div id="equationReferences" class="equation-shortcuts"></div></section>
+    </div>
+    <div class="equation-dialog-footer"><button id="cancelEquation" class="secondary-button" type="button">Annuler</button><button id="saveEquation" class="file-button" type="button" disabled>Appliquer l’équation</button></div>
+  </dialog>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@14.8.1/lib/browser/math.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+  <script type="module" src="../../shared/components/course-header.js"></script>
+  <script type="module" src="./scripts/app.js?v=20261019-convolution1"></script>
+</body>
+</html>
