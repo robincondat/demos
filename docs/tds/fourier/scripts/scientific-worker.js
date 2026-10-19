@@ -4,7 +4,7 @@ async function initialize() {
   importScripts(`${PYODIDE_URL}pyodide.js`);
   const pyodide = await loadPyodide({ indexURL: PYODIDE_URL });
   await pyodide.loadPackage(["numpy", "scipy"]);
-  const source = await fetch("./scientific.py?v=20261005b").then((response) => response.text());
+  const source = await fetch("./scientific.py?v=20261019-dirac1").then((response) => response.text());
   pyodide.runPython(source);
   postMessage({ type: "ready" });
   return pyodide;
