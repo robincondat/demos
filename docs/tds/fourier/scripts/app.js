@@ -1,4 +1,4 @@
-import { createChart } from "./chart.js?v=20261005";
+import { createChart } from "./chart.js?v=20261021-curves2";
 import { decodeWav, makeSignal, palette, signalName } from "./signals.js?v=20261019-help1";
 import { parseEquation, parsePiecewise, renderFormula, renameSignal } from "./equations.js?v=20261019-help1";
 import { createEquationEditor } from "./equation-editor.js?v=20261019-help1";

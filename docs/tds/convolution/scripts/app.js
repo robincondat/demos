@@ -1,12 +1,16 @@
-import { createChart } from "./chart.js?v=20261005";
+import { createChart } from "./chart.js?v=20261022-pointer1";
+import { createConvolutionInspector } from "./convolution-inspector.js?v=20261022-pointer1";
 import { decodeWav, makeSignal, palette, signalName } from "./signals.js?v=20261019-help1";
 import { parseEquation, parsePiecewise, renderFormula, renameSignal } from "./equations.js?v=20261019-help1";
 import { createEquationEditor } from "./equation-editor.js?v=20261019-help1";
 const byId=id=>document.getElementById(id);
 const slots=['input','impulse'];
 const elements={signalTemplate:byId('signalTemplate'),signalError:byId('signalError')};
-const charts=Object.fromEntries([...slots,'output'].map(slot=>[slot,createChart({stage:byId(slot+'Stage'),canvas:byId(slot+'Chart'),tooltip:byId(slot+'Tooltip'),xLabel:'Temps (s)',yLabel:()=> 'Amplitude'})]));
-const worker=new Worker('./scripts/scientific-worker.js?v=20261019-convolution1');
+const charts=Object.fromEntries([...slots,'output'].map(slot=>[slot,createChart({stage:byId(slot+'Stage'),canvas:byId(slot+'Chart'),tooltip:byId(slot+'Tooltip'),xLabel:slot==='impulse'?'τ (s)':'Temps (s)',yLabel:()=> 'Amplitude',onPointerTime:slot!=='input'?time=>{charts.output.setCursor(time);charts.impulse.setCursor(time);if(time!==null)inspector.hoverTime(time);}:undefined})]));
+const inspector=createConvolutionInspector({chart:charts.impulse,stage:byId('impulseStage')});
+charts.output.onViewChange(view=>charts.impulse.setView(view));
+charts.impulse.onViewChange(view=>charts.output.setView(view));
+const worker=new Worker('./scripts/scientific-worker.js?v=20261022-pointer1');
 let signals=[],updateTimer=null,requestId=0,pythonReady=false;
 const importsInProgress={input:0,impulse:0},busy={input:false,impulse:false};
 const mode=()=>document.querySelector('input[name="mode"]:checked').value;
@@ -14,7 +18,7 @@ const numeric=input=>input.value.trim()!==''&&Number.isFinite(Number(input.value
 const schedule=()=>{clearTimeout(updateTimer);++requestId;clearOutput();updateTimer=setTimeout(update,80);};
 const equationEditor=createEquationEditor({signals:()=>signals,onSave(signal){renderSignals(signal.id);schedule();}});
 function refreshActions(){for(const slot of slots){const filled=signals.some(signal=>signal.slot===slot);byId(slot+'Actions').hidden=filled;document.querySelectorAll('[data-create="'+slot+'"], [data-load="'+slot+'"]').forEach(button=>button.disabled=filled||busy[slot]);}}
-function clearOutput(){charts.output.setData([]);byId('outputEmpty').hidden=false;byId('outputEmpty').textContent='Définissez les deux signaux pour calculer leur convolution.';}
+function clearOutput(){inspector.clear();charts.output.setData([]);byId('outputEmpty').hidden=false;byId('outputEmpty').textContent='Définissez les deux signaux pour calculer leur convolution.';}
 function clearResults(){for(const slot of slots){charts[slot].setData([]);byId(slot+'Empty').hidden=false;}clearOutput();}
 function renderSignalFormula(card, signal, index) {
   const formula = card.querySelector("[data-equation-formula]");
@@ -98,15 +102,18 @@ function update(){
    for(const [name,value] of Object.entries(signal.variables||{}))if(value===null||!Number.isFinite(value))throw Error(signalName(signal)+' : saisissez une valeur pour '+name+'.');
   }
   byId('engineStatus').textContent='Calcul en cours…';
-  worker.postMessage({type:'compute',id:++requestId,payload:{signals,mode:mode()}});
+  worker.postMessage({type:'compute',id:++requestId,payload:{signals,mode:mode(),normalize:byId('normalizeConvolution').checked}});
  }catch(error){clearResults();elements.signalError.textContent=error.message;byId('engineStatus').textContent='';}
 }
 function display(result){
- for(const slot of slots){const data=result.signals.find(data=>data.slot===slot),signal=signals.find(signal=>signal.slot===slot);charts[slot].setData(data?[{x:data.times,y:data.values,label:signalName(signal),color:palette[slots.indexOf(slot)],width:1.7}]:[]);byId(slot+'Empty').hidden=Boolean(data);}
+ const sources=slots.flatMap((slot,index)=>{const data=result.signals.find(item=>item.slot===slot),signal=signals.find(item=>item.slot===slot);return data?[{x:data.times,y:data.values,label:signalName(signal),color:palette[index],width:1.7}]:[];});
+ charts.input.setData(sources);byId('inputEmpty').hidden=sources.length>0;
  const data=result.convolution;
  charts.output.setData(data?[{x:data.times,y:data.values,label:'Convolution',color:palette[2],width:1.7}]:[]);
  byId('outputEmpty').hidden=Boolean(data);byId('outputEmpty').textContent=result.convolutionError||'Définissez les deux signaux pour calculer leur convolution.';
  elements.signalError.textContent=result.convolutionError||'';
+ inspector.setResult(result,signals.find(signal=>signal.slot==='input')?.sampleRate);
+ if(data){const shared=[data.times[0],data.times[data.times.length-1]];if(shared[1]===shared[0])shared[1]+=1/signals.find(signal=>signal.slot==='input').sampleRate;inspector.setDomain(shared);charts.output.setDomain(shared);charts.impulse.setDomain(shared);}
 }
 worker.addEventListener('message',({data})=>{
  if(data.type==='ready'){pythonReady=true;byId('engineStatus').textContent='';update();}
@@ -116,7 +123,7 @@ worker.addEventListener('message',({data})=>{
 worker.addEventListener('error',()=>{clearResults();elements.signalError.textContent='Le moteur de calcul n’a pas pu démarrer. Rechargez la page.';byId('engineStatus').textContent='';});
 function addSignal(slot,overrides={}){
  if(signals.some(signal=>signal.slot===slot))return;
- const signal=makeSignal(signals.map(signal=>signal.code),{name:slot==='input'?'x':'h',slot,...overrides});
+ const signal=makeSignal(signals.map(signal=>signal.code),{name:slot==='input'?'A':'B',slot,...overrides});
  const original=signal.name;let suffix=2;while(signals.some(item=>signalName(item)===signal.name))signal.name=original+'_'+suffix++;
  signals.push(signal);signals.sort((a,b)=>slots.indexOf(a.slot)-slots.indexOf(b.slot));renderSignals(signal.id);schedule();
 }
@@ -132,8 +139,10 @@ for(const slot of slots){
  });
 }
 document.querySelectorAll('input[name="mode"]').forEach(input=>input.addEventListener('change',()=>{updateMode();schedule();}));
+byId('normalizeConvolution').addEventListener('change',schedule);
 byId('resetButton').addEventListener('click',()=>{
  clearTimeout(updateTimer);++requestId;equationEditor.close();signals=[];
+ byId('normalizeConvolution').checked=false;
  for(const slot of slots){++importsInProgress[slot];busy[slot]=false;byId(slot+'Wav').value='';byId(slot+'Error').textContent='';}
  document.querySelector('input[name="mode"][value="full"]').checked=true;updateMode();renderSignals();clearResults();elements.signalError.textContent='';if(pythonReady)byId('engineStatus').textContent='';
 });

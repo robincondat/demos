@@ -14,6 +14,17 @@ def signal(slot, values, start=0, rate=8):
                 start=start, end=start + len(values) / rate)
 
 class ConvolutionTests(unittest.TestCase):
+    def test_normalization_multiplies_only_output_by_sample_period(self):
+        for mode in ['full', 'same', 'valid']:
+            for rate in [8, 32]:
+                inputs = [signal('input', [1, 2, 3], rate=rate), signal('impulse', [2, -1], rate=rate)]
+                raw = engine.compute(dict(signals=inputs, mode=mode))
+                normalized = engine.compute(dict(signals=inputs, mode=mode, normalize=True))
+                np.testing.assert_allclose(normalized['convolution']['values'], raw['convolution']['values'] / rate)
+                np.testing.assert_array_equal(normalized['convolution']['times'], raw['convolution']['times'])
+                for a, b in zip(raw['signals'], normalized['signals']):
+                    np.testing.assert_array_equal(a['values'], b['values'])
+
     def test_numpy_values_and_time_origin_in_all_modes(self):
         rng = np.random.default_rng(42)
         for n, m in [(1, 1), (1, 7), (4, 3), (3, 4), (4, 4), (5, 2), (2, 5), (2000, 900)]:

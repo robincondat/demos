@@ -224,13 +224,14 @@ def compute(payload):
     result = {'signals': results, 'convolution': None, 'convolutionError': ''}
     if len(results) != 2: return result
     if not np.isclose(float(signals[0]['sampleRate']), float(signals[1]['sampleRate']), rtol=1e-12, atol=0):
-        result['convolutionError'] = 'Choisissez la même fréquence d’échantillonnage pour le signal et la réponse impulsionnelle.'
+        result['convolutionError'] = 'Choisissez la même fréquence d’échantillonnage pour le signal A et le signal B.'
         return result
     rate = float(signals[0]['sampleRate'])
     a, b = results[0]['values'], results[1]['values']
     # Le tri par longueur reproduit np.convolve en mode same, même si h est plus long.
     if a.size < b.size: a, b = b, a
     values = convolve(a, b, mode=mode, method='auto')
+    if payload.get('normalize', False): values = values / rate
     offset = 0 if mode == 'full' else (b.size - 1) // 2 if mode == 'same' else b.size - 1
     start = float(signals[0]['start']) + float(signals[1]['start'])
     times = start + (offset + np.arange(values.size, dtype=np.float64)) / rate

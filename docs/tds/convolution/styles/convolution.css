@@ -212,3 +212,8 @@ main { padding-top:14px; }
 .convolution-options input:checked + span { border-color:var(--signal-green); background:#e9f7f1; color:#0f7256; }
 .mode-description { margin:12px 0; font-size:.8rem; line-height:1.6; color:var(--text); }
 .signal-actions[hidden], .chart-empty[hidden] { display:none; }
+.convolution-details > summary { padding:16px; cursor:pointer; font-size:.94rem; font-weight:600; color:var(--text); }
+.convolution-details[open] > summary { border-bottom:1px solid var(--line); }
+.convolution-details > summary:focus-visible { outline:2px solid var(--signal-green); outline-offset:-3px; }
+.normalization-option { display:flex; align-items:flex-start; gap:8px; font-size:.8rem; line-height:1.5; margin:12px 0; }
+.normalization-option input { margin-top:3px; flex-shrink:0; }
