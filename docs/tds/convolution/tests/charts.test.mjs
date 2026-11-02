@@ -72,3 +72,15 @@ test('Le survol communique le temps et place le repère sur la figure liée sans
     assert.equal(f.dashed(), beforeA); assert.equal(g.dashed(), beforeB);
   }
 });
+
+test('Le déplacement du repère réutilise les points du tracé dense', async () => {
+  const { createChart } = await import('../scripts/chart.js');
+  const f = fixture(), chart = createChart(f), count = 100_000;
+  let reads = 0;
+  const raw = Float64Array.from({ length: count }, (_, i) => Math.sin(i));
+  const values = new Proxy(raw, { get(target, key) { if (/^\d+$/.test(String(key))) reads++; return Reflect.get(target, key, target); } });
+  chart.setData([{ x: Float64Array.from({ length: count }, (_, i) => i / 1000), y: values, label: 'Long', color: '#168665' }]);
+  const before = reads;
+  for (let i = 0; i < 5; i++) f.stage.dispatchEvent(new UIEvent('pointermove', { clientX: 200 + i, clientY: 100 }));
+  assert(reads - before < 20_000, 'Le survol doit réutiliser la réduction du tracé et son échelle');
+});

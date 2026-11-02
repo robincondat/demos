@@ -199,23 +199,38 @@ def evaluate(signal, times, previous, sample_period=None, cache=None):
     return np.where(mask, values, 0)
 
 
+def sample_counts(signals):
+    """Validation des tailles ; l'avertissement mémoire est géré dans l'interface."""
+    counts = []
+    for signal in signals:
+        name = signal.get('name') or signal['code']
+        start, end, rate = float(signal['start']), float(signal['end']), float(signal['sampleRate'])
+        if not all(np.isfinite(value) for value in [start, end, rate]): raise ValueError(f'{name} : paramètres temporels non finis')
+        if end <= start: raise ValueError(f'{name} : la fin doit être supérieure au début')
+        if rate <= 0: raise ValueError(f'{name} : la fréquence d’échantillonnage doit être positive')
+        size = (end - start) * rate
+        if not np.isfinite(size) or size > np.iinfo(np.intp).max // 8:
+            raise ValueError('La taille du signal dépasse les dimensions possibles d’un tableau.')
+        counts.append(max(1, int(np.ceil(size - 1e-10))))
+    return counts
+
+
 def compute(payload):
     from scipy.signal import convolve
     mode = payload.get('mode', 'full')
     if mode not in {'full', 'same', 'valid'}: raise ValueError('Mode de convolution inconnu')
     signals = payload['signals']
     if len(signals) > 2 or len({item.get('slot') for item in signals}) != len(signals): raise ValueError('Un seul signal est autorisé par section')
+    counts = sample_counts(signals)
     results, previous = [], []
-    for signal in signals:
+    for signal, count in zip(signals, counts):
         if signal.get('slot') not in {'input', 'impulse'}: raise ValueError('Section inconnue')
         name = signal.get('name') or signal['code']
         start, end, rate = float(signal['start']), float(signal['end']), float(signal['sampleRate'])
         if not all(np.isfinite(value) for value in [start, end, rate]): raise ValueError(f'{name} : paramètres temporels non finis')
         if end <= start: raise ValueError(f'{name} : la fin doit être supérieure au début')
         if rate <= 0: raise ValueError(f'{name} : la fréquence d’échantillonnage doit être positive')
-        if (end - start) * rate > 1000000: raise ValueError(f'{name} : limitez le signal à 1 000 000 d’échantillons')
         # Axe demi-ouvert [début, fin[, identique à celui de Fourier.
-        count = max(1, int(np.ceil((end - start) * rate - 1e-10)))
         times = start + np.arange(count, dtype=np.float64) / rate
         values = evaluate(signal, times, previous, 1 / rate, {})
         if not np.all(np.isfinite(values)): raise ValueError(f'{name} : valeurs non finies')
@@ -231,7 +246,7 @@ def compute(payload):
     # Le tri par longueur reproduit np.convolve en mode same, même si h est plus long.
     if a.size < b.size: a, b = b, a
     values = convolve(a, b, mode=mode, method='auto')
-    if payload.get('normalize', False): values = values / rate
+    if payload.get('normalize', False): values /= rate
     offset = 0 if mode == 'full' else (b.size - 1) // 2 if mode == 'same' else b.size - 1
     start = float(signals[0]['start']) + float(signals[1]['start'])
     times = start + (offset + np.arange(values.size, dtype=np.float64)) / rate

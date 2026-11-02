@@ -1,5 +1,5 @@
 import { createChart } from "./chart.js?v=20261021-curves2";
-import { decodeWav, makeSignal, palette, signalName } from "./signals.js?v=20261019-help1";
+import { decodeWav, makeSignal, palette, signalName } from "./signals.js?v=20261022-wav1";
 import { parseEquation, parsePiecewise, renderFormula, renameSignal } from "./equations.js?v=20261019-help1";
 import { createEquationEditor } from "./equation-editor.js?v=20261019-help1";
 const byId = (id) => document.getElementById(id);
@@ -8,7 +8,7 @@ const timeChart = createChart({ stage: byId("timeStage"), canvas: byId("timeChar
 const spectrumType = () => document.querySelector('input[name="spectrum"]:checked').value;
 const transformType = () => document.querySelector('input[name="transform"]:checked').value;
 const spectrumChart = createChart({ stage: byId("spectrumStage"), canvas: byId("spectrumChart"), tooltip: byId("spectrumTooltip"), xLabel: "Fréquence (Hz)", yLabel: () => spectrumType() === "phase" ? "Phase (rad)" : "Amplitude" });
-const worker = new Worker("./scripts/scientific-worker.js?v=20261019-dirac1");
+const worker = new Worker("./scripts/scientific-worker.js?v=20261022-wav1");
 let signals = [], updateTimer = null, requestId = 0, pythonReady = false, lastResult = null;
 let wavImportVersion = 0;
 const numeric = (input, fallback = 0) => {

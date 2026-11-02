@@ -14,6 +14,25 @@ def signal(slot, values, start=0, rate=8):
                 start=start, end=start + len(values) / rate)
 
 class ConvolutionTests(unittest.TestCase):
+    def test_long_wav_and_short_filter(self):
+        count = 1_294_174
+        samples = (np.arange(count, dtype=np.float64) % 101) - 50
+        rate = 44100
+        out = engine.compute(dict(signals=[signal('input', samples, rate=rate), signal('impulse', [1, 0.5, -0.25], rate=rate)]))
+        expected = np.zeros(count + 2)
+        expected[:count] += samples
+        expected[1:count + 1] += 0.5 * samples
+        expected[2:] -= 0.25 * samples
+        np.testing.assert_allclose(out['convolution']['values'], expected, atol=1e-6)
+        self.assertEqual(out['convolution']['times'].size, count + 2)
+
+    def test_large_sizes_are_not_refused_by_the_engine(self):
+        a, b = signal('input', [1]), signal('impulse', [1])
+        a.update(end=3_000_000, sampleRate=1)
+        b.update(end=3_000_000, sampleRate=1)
+        self.assertEqual(engine.sample_counts([a]), [3_000_000])
+        self.assertEqual(engine.sample_counts([a, b]), [3_000_000, 3_000_000])
+
     def test_normalization_multiplies_only_output_by_sample_period(self):
         for mode in ['full', 'same', 'valid']:
             for rate in [8, 32]:
@@ -60,7 +79,7 @@ class ConvolutionTests(unittest.TestCase):
         np.testing.assert_allclose(result['convolution']['values'], np.convolve([1, 1, 0, 0, 1, 1, 0, 0], [1, 1]))
 
     def test_invalid_parameters(self):
-        for changes in [dict(sampleRate=0), dict(sampleRate=float('nan')), dict(end=0), dict(end=1e9)]:
+        for changes in [dict(sampleRate=0), dict(sampleRate=float('nan')), dict(end=0), dict(end=float('inf'))]:
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 engine.compute(dict(signals=[dict(signal('input', [1, 1]), **changes)]))
         with self.assertRaises(ValueError): engine.compute(dict(signals=[signal('input', [1]), signal('input', [2])]))

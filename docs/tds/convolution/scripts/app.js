@@ -1,6 +1,7 @@
-import { createChart } from "./chart.js?v=20261022-pointer1";
+import { createChart } from "./chart.js?v=20261022-longwav1";
+import { createMemoryWarning } from "./memory-warning.js?v=20261022-warning1";
 import { createConvolutionInspector } from "./convolution-inspector.js?v=20261022-pointer1";
-import { decodeWav, makeSignal, palette, signalName } from "./signals.js?v=20261019-help1";
+import { decodeWav, makeSignal, palette, signalName } from "./signals.js?v=20261022-wav1";
 import { parseEquation, parsePiecewise, renderFormula, renameSignal } from "./equations.js?v=20261019-help1";
 import { createEquationEditor } from "./equation-editor.js?v=20261019-help1";
 const byId=id=>document.getElementById(id);
@@ -10,10 +11,11 @@ const charts=Object.fromEntries([...slots,'output'].map(slot=>[slot,createChart(
 const inspector=createConvolutionInspector({chart:charts.impulse,stage:byId('impulseStage')});
 charts.output.onViewChange(view=>charts.impulse.setView(view));
 charts.impulse.onViewChange(view=>charts.output.setView(view));
-const worker=new Worker('./scripts/scientific-worker.js?v=20261022-pointer1');
+const worker=new Worker('./scripts/scientific-worker.js?v=20261022-warning1');
 let signals=[],updateTimer=null,requestId=0,pythonReady=false;
 const importsInProgress={input:0,impulse:0},busy={input:false,impulse:false};
 const mode=()=>document.querySelector('input[name="mode"]:checked').value;
+const memoryWarning=createMemoryWarning(message=>window.confirm(message));
 const numeric=input=>input.value.trim()!==''&&Number.isFinite(Number(input.value))?Number(input.value):NaN;
 const schedule=()=>{clearTimeout(updateTimer);++requestId;clearOutput();updateTimer=setTimeout(update,80);};
 const equationEditor=createEquationEditor({signals:()=>signals,onSave(signal){renderSignals(signal.id);schedule();}});
@@ -101,6 +103,7 @@ function update(){
    for(const field of ['sampleRate','start','end'])if(!Number.isFinite(signal[field]))throw Error(signalName(signal)+' : saisissez une valeur valide pour '+({sampleRate:'la fréquence d’échantillonnage',start:'le début',end:'la fin'}[field])+'.');
    for(const [name,value] of Object.entries(signal.variables||{}))if(value===null||!Number.isFinite(value))throw Error(signalName(signal)+' : saisissez une valeur pour '+name+'.');
   }
+  if(!memoryWarning.check(signals)){byId('engineStatus').textContent='Calcul annulé.';return;}
   byId('engineStatus').textContent='Calcul en cours…';
   worker.postMessage({type:'compute',id:++requestId,payload:{signals,mode:mode(),normalize:byId('normalizeConvolution').checked}});
  }catch(error){clearResults();elements.signalError.textContent=error.message;byId('engineStatus').textContent='';}
@@ -142,6 +145,7 @@ document.querySelectorAll('input[name="mode"]').forEach(input=>input.addEventLis
 byId('normalizeConvolution').addEventListener('change',schedule);
 byId('resetButton').addEventListener('click',()=>{
  clearTimeout(updateTimer);++requestId;equationEditor.close();signals=[];
+ memoryWarning.reset();
  byId('normalizeConvolution').checked=false;
  for(const slot of slots){++importsInProgress[slot];busy[slot]=false;byId(slot+'Wav').value='';byId(slot+'Error').textContent='';}
  document.querySelector('input[name="mode"][value="full"]').checked=true;updateMode();renderSignals();clearResults();elements.signalError.textContent='';if(pythonReady)byId('engineStatus').textContent='';

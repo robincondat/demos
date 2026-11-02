@@ -17,6 +17,25 @@ test('Un temps survolé sélectionne le résultat le plus proche et déplace le 
   inspector.clear();
 });
 
+test('La visualisation des signaux longs réutilise ses tampons entre deux positions', async () => {
+  globalThis.requestAnimationFrame = callback => setTimeout(callback, 0);
+  globalThis.cancelAnimationFrame = clearTimeout;
+  const count = 1_294_174, rate = 44100;
+  const times = Float64Array.from({ length: count }, (_, i) => i / rate);
+  const values = new Float64Array(count).fill(1);
+  const panel = new EventTarget(); panel.open = false;
+  const chart = { setData(series) { this.series = series; } };
+  const inspector = createConvolutionInspector({ chart, stage: { closest: () => panel, querySelector: () => ({ hidden: true }) } });
+  inspector.setResult({ signals: [{ slot: 'input', times, values }, { slot: 'impulse', times, values }], convolution: { times: [0, 1, 2], values: [1, 2, 3] } }, rate);
+  assert.equal(chart.series, undefined, 'Le panneau fermé ne doit pas tracer les signaux');
+  panel.open = true; panel.dispatchEvent(new Event('toggle'));
+  const productBuffer = chart.series[0].y, flippedBuffer = chart.series[2].x;
+  inspector.hoverTime(2); await new Promise(resolve => setTimeout(resolve, 15));
+  assert.equal(chart.series[0].y, productBuffer); assert.equal(chart.series[2].x, flippedBuffer);
+  assert.equal(chart.series[0].y[0], 1); assert.equal(chart.series[0].y[2 * rate], 1); assert.equal(chart.series[0].y[2 * rate + 1], 0);
+  inspector.clear();
+});
+
 test('L’échelle suit les deux signaux sans multiplier leurs amplitudes', () => {
   assert.deepEqual(signalYRange([0, 10], [0, 20]), [0, 21.6]);
   assert.deepEqual(signalYRange([-2, 0], [1, 3]), [-2.4, 3.4]);

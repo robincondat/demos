@@ -1,5 +1,5 @@
 import { parseEquation, parsePiecewise, parsePeriod, renderFormula, referenceName, referenceText } from "./equations.js?v=20261019-help1";
-import { signalName, palette } from "./signals.js?v=20261019-help1";
+import { signalName, palette } from "./signals.js?v=20261022-wav1";
 import { colorizeInput } from "./syntax-colors.js?v=20261019-help1";
 import { createEquationHelp } from "./equation-help.js?v=20261019-help1";
 

@@ -1,5 +1,5 @@
 import { FUNCTIONS, functionName, referenceName, referenceText } from "./equations.js?v=20261019-help1";
-import { palette } from "./signals.js?v=20261019-help1";
+import { palette } from "./signals.js?v=20261022-wav1";
 
 export function expressionTokens(text, previous = []) {
   const tokens = [];

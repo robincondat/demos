@@ -45,8 +45,12 @@ export function createChart({ stage, canvas, tooltip, xLabel, yLabel, onHover, o
   let series = [], fullMin = 0, fullMax = 1, viewMin = 0, viewMax = 1, drag = null;
   const margins = { left: 62, right: 18, top: 18, bottom: 42 };
   let fixedYRange = null;
+  let yCache = null;
+  const samplingCache = new WeakMap();
   const axisLabel = () => typeof xLabel === "function" ? xLabel() : xLabel;
   function setData(nextSeries, options = {}) {
+    yCache = null;
+    for (const item of nextSeries) samplingCache.delete(item);
     fixedYRange = options.yRange || null;
     series = nextSeries.filter(({ x, y }) => x.length && y.length);
     if (!series.length) { linkedCursor = null; pointerClientX = null; }
@@ -59,11 +63,14 @@ export function createChart({ stage, canvas, tooltip, xLabel, yLabel, onHover, o
   }
   function visibleYRange() {
     if (fixedYRange) return fixedYRange;
+    if (yCache && yCache.min === viewMin && yCache.max === viewMax) return yCache.range;
     let min = Infinity, max = -Infinity;
     for (const item of series) for (let i = lowerBound(item.x, viewMin); i < item.x.length && item.x[i] <= viewMax; i++) { min = Math.min(min, item.y[i]); max = Math.max(max, item.y[i]); }
-    if (!Number.isFinite(min)) return [-1, 1];
-    if (min === max) { const padding = Math.abs(min) * .1 || 1; return [min - padding, max + padding]; }
-    const padding = (max - min) * .08; return [min - padding, max + padding];
+    let range;
+    if (!Number.isFinite(min)) range = [-1, 1];
+    else if (min === max) { const padding = Math.abs(min) * .1 || 1; range = [min - padding, max + padding]; }
+    else { const padding = (max - min) * .08; range = [min - padding, max + padding]; }
+    yCache = { min: viewMin, max: viewMax, range }; return range;
   }
   function lowerBound(values, target) { let low = 0, high = values.length; while (low < high) { const middle = (low + high) >> 1; if (values[middle] < target) low = middle + 1; else high = middle; } return low; }
   function resize() {
@@ -87,7 +94,10 @@ export function createChart({ stage, canvas, tooltip, xLabel, yLabel, onHover, o
     for (const item of series) {
       const start = Math.max(0, lowerBound(item.x, viewMin) - 1),
         end = Math.min(item.x.length, lowerBound(item.x, viewMax) + 1),
-        visibleIndices = peakPreservingIndices(item.y, start, end, plotWidth);
+        cached = samplingCache.get(item),
+        visibleIndices = cached && cached.start === start && cached.end === end && cached.width === plotWidth
+          ? cached.indices : peakPreservingIndices(item.y, start, end, plotWidth);
+      samplingCache.set(item, { start, end, width: plotWidth, indices: visibleIndices });
       if (item.signedFill && visibleIndices.length) {
         for (const [positive, color] of [[true, '#16866540'], [false, '#d34d7245']]) {
           context.save(); context.beginPath();

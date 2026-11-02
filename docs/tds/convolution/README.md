@@ -2,6 +2,12 @@
 
 Ouvrir `tds/convolution/` depuis le serveur HTTP des autres démos.
 Le calcul tourne dans un Web Worker avec Pyodide, NumPy et SciPy.
+Les WAV longs sont acceptés : la limite fixe d'un million d'échantillons
+est remplacée par une estimation des entrées, de la sortie complète et des
+tampons de calcul. Au-delà de 512 Mio estimés, un avertissement permet de
+continuer ou d'annuler. Un volume déjà accepté ne redemande pas confirmation,
+sauf s'il augmente ; la réinitialisation remet cet accord à zéro.
+Cette estimation ne représente pas toute la mémoire du navigateur et de Pyodide.
 
 Chaque section, **Signal A** et **Signal B**, accepte un seul signal :
 une équation ou un WAV. Supprimer sa carte pour changer de source.
@@ -38,10 +44,13 @@ Leur domaine temporel correspond aux échantillons du résultat dans le mode cho
 L'échelle verticale de la visualisation suit les amplitudes de A et B.
 Un double clic recentre les deux vues ; le graphique des entrées reste indépendant.
 Une ligne verticale pointillée repère la position de la souris au survol de chaque vue du bas.
+Les tracés denses conservent leurs extrema locaux. Les points affichés et
+l'échelle verticale sont mis en cache pour les déplacements du repère sans
+changement de données ou de cadrage.
 
 Vérifications (NumPy et SciPy requis pour Python) :
 
 ```sh
 python -B -m unittest discover -s tds/convolution/tests
-node --test tds/convolution/tests/inspector.test.mjs tds/convolution/tests/charts.test.mjs
+node --test tds/convolution/tests/*.test.mjs
 ```
