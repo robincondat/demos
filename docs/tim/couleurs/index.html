@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Explorez les composantes RGB, CMYK, YCbCr et HSV avec deux visualiseurs synchronisés."
+    />
+    <title>TIM - Espaces de couleurs</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101a2c'/%3E%3Cg fill='%234fd1c5'%3E%3Crect x='12' y='12' width='11' height='11' rx='2'/%3E%3Crect x='27' y='12' width='11' height='11' rx='2'/%3E%3Crect x='42' y='12' width='11' height='11' rx='2'/%3E%3Crect x='12' y='27' width='11' height='11' rx='2'/%3E%3Crect x='27' y='27' width='11' height='11' rx='2' fill='%23f3b743'/%3E%3Crect x='42' y='27' width='11' height='11' rx='2'/%3E%3Crect x='12' y='42' width='11' height='11' rx='2'/%3E%3Crect x='27' y='42' width='11' height='11' rx='2'/%3E%3Crect x='42' y='42' width='11' height='11' rx='2'/%3E%3C/g%3E%3C/svg%3E"
+    />
+    <!-- Composants communs à tous les démonstrateurs TIM. -->
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/image-viewer.css" />
+    <link rel="stylesheet" href="../../shared/styles/theme.css" />
+    <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+    <!-- Styles de la plateforme couleurs. -->
+    <link rel="stylesheet" href="./styles/couleurs.css?v=20261103-menus1" />
+  </head>
+  <body>
+    <!-- Le titre est configurable indépendamment pour chaque démonstrateur. -->
+    <course-header
+      page-title="Espaces de couleurs"
+      course-code="TIM"
+      course-name="Traitement d’Images"
+      instructor="Robin Condat"
+    ></course-header>
+<main>
+      <!-- Chargement et export de l'image -->
+      <section class="upload-row" aria-label="Chargement de l’image">
+        <label class="file-button" for="imageInput">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M12 16V4m0 0L7 9m5-5 5 5M5 14v5h14v-5" />
+          </svg>
+          Charger une image
+        </label>
+        <input
+          id="imageInput"
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.pbm,.pgm,.ppm,image/jpeg,image/png,image/webp,image/bmp,image/tiff"
+        />
+        <div class="file-meta" hidden>
+          <strong id="fileName">Aucune image chargée</strong>
+          <span id="imageMeta"
+            >JPEG, PNG, WebP, BMP, TIFF, PBM, PGM ou PPM</span
+          >
+        </div>
+        <button
+          id="downloadButton"
+          class="secondary-button"
+          type="button"
+          disabled
+        >
+          Télécharger le résultat
+        </button>
+      </section>
+
+      <!-- Espace de travail : visualisation à gauche, paramètres à droite -->
+      <div class="workspace-layout">
+        <div class="visual-workspace">
+          <!-- Comparaison originale / résultat -->
+          <section class="comparison" aria-label="Comparaison des images">
+            <article class="image-panel">
+              <div class="panel-heading">
+                <h2>Image RGB</h2><label class="view-choice"><span class="sr-only">Vue RGB</span><select id="originalView" aria-label="Vue RGB"></select></label>
+                <span id="originalBadge" hidden>—</span>
+              </div>
+              <div class="canvas-stage empty" id="originalStage">
+                <canvas id="originalCanvas"></canvas><div id="originalCloud" class="cloud-view" hidden></div>
+                <div class="empty-state">
+                  <p>Chargez une image pour commencer</p>
+                </div>
+              </div>
+            </article>
+            <article class="image-panel">
+              <div class="panel-heading">
+                <h2 id="resultTitle">Image CMYK</h2><label class="view-choice"><span class="sr-only">Vue convertie</span><select id="resultView" aria-label="Vue convertie"></select></label>
+                <span id="resultBadge" hidden>—</span>
+              </div>
+              <div class="canvas-stage empty" id="resultStage">
+                <canvas id="resultCanvas"></canvas><div id="resultCloud" class="cloud-view" hidden></div>
+                <div class="empty-state"><p>Le résultat apparaîtra ici</p></div>
+                <div class="processing" id="processing" hidden>Calcul…</div>
+              </div>
+            </article>
+          </section>
+
+          <!-- Plages d'affichage et navigation synchronisée -->
+          <section class="navigation-tools" aria-label="Navigation">
+<div
+              class="view-toolbar"
+              aria-label="Navigation synchronisée dans les images"
+            >
+              <div class="view-toolbar-heading">
+                <strong id="navigationTitle">Navigation</strong><label class="check sync-choice"><input id="syncNavigation" type="checkbox" checked /><span>Navigation synchronisée</span></label>
+              </div>
+              <div class="zoom-controls">
+                <input
+                  id="zoomSlider"
+                  type="range"
+                  min="0"
+                  max="1000"
+                  step="1"
+                  value="384"
+                  aria-label="Niveau de zoom"
+                  disabled
+                />
+                <output id="zoomLabel" for="zoomSlider" aria-live="polite"
+                  >100 %</output
+                >
+                <button id="fitView" type="button" disabled>Ajuster</button>
+              </div>
+            </div>
+</section>
+
+          <!-- Mesures, valeurs sous le curseur et histogrammes -->
+          <section class="analysis-strip" aria-label="Analyse des images">
+            <article class="analysis-panel image-information">
+              <h2>Informations sur l’image</h2>
+              <dl>
+                <div>
+                  <dt>Dimensions</dt>
+                  <dd id="infoDimensions">—</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd id="infoType">—</dd>
+                </div>
+                <div>
+                  <dt>Plage originale</dt>
+                  <dd id="infoOriginalRange">—</dd>
+                </div>
+                <div>
+                  <dt>Taille du fichier</dt>
+                  <dd id="infoFileSize">—</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="analysis-panel cursor-information">
+              <h2>Valeurs sous le curseur</h2>
+              <dl>
+                <div>
+                  <dt>Position</dt>
+                  <dd id="cursorPosition">—</dd>
+                </div>
+                <div>
+                  <dt>Originale</dt>
+                  <dd id="cursorOriginal">—</dd>
+                </div>
+                <div>
+                  <dt>Traitée</dt>
+                  <dd id="cursorResult">—</dd>
+                </div>
+                <div>
+                  <dt>Écart affiché (RGB)</dt>
+                  <dd id="cursorDifference">—</dd>
+                </div>
+              </dl>
+            </article>
+
+            <article class="analysis-panel histogram-panel">
+              <h2>Histogrammes</h2>
+              <div class="histograms">
+                <figure>
+                  <figcaption>
+                    Originale <span id="originalHistogramRange">—</span>
+                  </figcaption>
+                  <canvas
+                    id="originalHistogram"
+                    width="360"
+                    height="120"
+                  ></canvas>
+                </figure>
+                <figure>
+                  <figcaption>
+                    Traitée <span id="resultHistogramRange">—</span>
+                  </figcaption>
+                  <canvas
+                    id="resultHistogram"
+                    width="360"
+                    height="120"
+                  ></canvas>
+                </figure>
+              </div>
+            </article>
+          </section>
+        </div>
+
+        <!-- Espace de destination. -->
+        <aside class="workbench" aria-label="Conversion de couleurs"><div class="section-title"><div><h2>Espace de couleurs</h2></div></div><fieldset class="filter-options color-space-options"><legend class="sr-only">Espace de destination</legend><label><input type="radio" name="space" value="cmyk" checked /><span><b>CMYK</b></span></label><label><input type="radio" name="space" value="ycbcr"  /><span><b>YCbCr</b></span></label><label><input type="radio" name="space" value="hsv"  /><span><b>HSV</b></span></label><label><input type="radio" name="space" value="lab" /><span><b>Lab</b></span></label><label><input type="radio" name="space" value="hls" /><span><b>HLS</b></span></label><label><input type="radio" name="space" value="xyz" /><span><b>XYZ</b></span></label></fieldset><section id="hsvSelection" class="hsv-selection" hidden><h3>Sélection HSV</h3><div class="hsv-threshold-heading"><span></span><span>Min.</span><span>Max.</span></div><div class="hsv-threshold-row"><strong>H <small>0–180</small></strong><input id="hMin" type="number" min="0" max="180" step="1" value="0" aria-label="H minimum" /><input id="hMax" type="number" min="0" max="180" step="1" value="180" aria-label="H maximum" /></div><div class="hsv-threshold-row"><strong>S <small>0–255</small></strong><input id="sMin" type="number" min="0" max="255" step="1" value="0" aria-label="S minimum" /><input id="sMax" type="number" min="0" max="255" step="1" value="255" aria-label="S maximum" /></div><div class="hsv-threshold-row"><strong>V <small>0–255</small></strong><input id="vMin" type="number" min="0" max="255" step="1" value="0" aria-label="V minimum" /><input id="vMax" type="number" min="0" max="255" step="1" value="255" aria-label="V maximum" /></div><p id="selectionError" class="validation" role="alert"></p><button id="resetSelection" class="secondary-button" type="button">Réinitialiser la sélection</button></section><div class="footer-actions"><button id="resetButton" class="secondary-button reset-button" type="button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.34-5.66L4 8.68M4 4v4.68h4.68" /></svg><span>Réinitialiser les paramètres</span></button></div><p id="conversionError" class="validation" role="alert"></p></aside>
+      </div>
+    </main>
+
+    <!-- Éditeur du noyau de convolution -->
+    <canvas id="sourceCanvas" hidden></canvas>
+    
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+    
+    <script
+      type="module"
+      src="../../shared/components/course-header.js"
+    ></script>
+    <script type="module" src="./scripts/app.js?v=20261103-menus1"></script>
+  </body>
+</html>
