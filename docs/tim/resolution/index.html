@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Échantillonnage spatial et quantification des niveaux de gris et des couleurs."
+    />
+    <title>TIM — Échantillonnage et quantification</title>
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../shared/styles/image-viewer.css?v=20261106-histcurves" />
+    <link rel="stylesheet" href="../../shared/styles/theme.css" />
+    <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+    <link rel="stylesheet" href="./styles/quantification.css?v=20261108-quant3" />
+  </head>
+  <body>
+    <course-header
+      page-title="Échantillonnage et quantification"
+      course-code="TIM"
+      course-name="Traitement d’Images"
+      instructor="Robin Condat"
+    ></course-header>
+    <main>
+      <template data-tim-component="upload" data-metadata="none"></template>
+      <div class="workspace-layout">
+        <div class="visual-workspace">
+          <section class="comparison" aria-label="Comparaison des images">
+            <template data-tim-component="image-panel" data-kind="original"></template>
+            <template data-tim-component="image-panel" data-kind="result"></template>
+          </section>
+          <section class="display-tools" aria-label="Affichage et navigation">
+            <template
+              data-tim-component="display-settings"
+              data-kind="original"
+              data-auto="true"
+            ></template>
+            <template data-tim-component="navigation"></template>
+            <template
+              data-tim-component="display-settings"
+              data-kind="result"
+              data-auto="true"
+            ></template>
+          </section>
+          <section class="analysis-strip" aria-label="Analyse des images">
+            <template data-tim-component="information"></template>
+            <template data-tim-component="cursor"></template>
+            <template data-tim-component="histograms"></template>
+          </section>
+        </div>
+        <aside class="workbench" aria-label="Paramètres">
+          <div class="section-title"><h2>Traitement</h2></div>
+          <fieldset class="filter-options operation-options">
+            <legend class="sr-only">Traitement appliqué</legend>
+            <label>
+              <input type="radio" name="operation" value="sampling" />
+              <span><b>Échantillonnage</b></span>
+            </label>
+            <label>
+              <input type="radio" name="operation" value="quantization" checked />
+              <span><b>Quantification</b></span>
+            </label>
+          </fieldset>
+          <div id="samplingSettings" hidden>
+            <div class="section-title"><h2>Échantillonnage</h2></div>
+            <label class="field">
+              <span>Diviser les dimensions par</span>
+              <select id="samplingFactor">
+                <option value="0">1 — taille originale</option>
+                <option value="1" selected>2</option>
+                <option value="2">4</option>
+                <option value="3">8</option>
+                <option value="4">16</option>
+                <option value="5">32</option>
+                <option value="6">64</option>
+                <option value="7">128</option>
+                <option value="8">256</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Méthode</span>
+              <select id="interpolation">
+                <option value="slice">Slicing</option>
+                <option value="linear">Bilinéaire</option>
+                <option value="nearest">Plus proche voisin</option>
+                <option value="area">Moyenne de surface</option>
+              </select>
+            </label>
+            <p id="samplingDescription" class="parameter-note"></p>
+          </div>
+          <div id="quantizationMethods">
+            <div class="section-title quantization-title"><h2>Quantification</h2></div>
+            <fieldset class="filter-options quantization-methods">
+              <legend class="sr-only">Méthode de quantification</legend>
+              <label>
+                <input type="radio" name="quantization" value="uniform" checked />
+                <span><b>Uniforme</b></span>
+              </label>
+              <label>
+                <input type="radio" name="quantization" value="kmeans" />
+                <span><b>Couleur — K-means</b></span>
+              </label>
+            </fieldset>
+          </div>
+          <label class="field" id="modeField">
+            <span>Mode de traitement</span>
+            <select id="colorMode">
+              <option value="gray">Niveaux de gris</option>
+              <option value="rgb">RGB — par canal</option>
+            </select>
+          </label>
+          <div id="uniformSettings">
+            <label class="field">
+              <span>Niveaux par canal</span>
+              <input id="levels" type="number" min="2" max="256" step="1" value="8" />
+            </label>
+          </div>
+          <div id="kmeansSettings" hidden>
+            <label class="field">
+              <span>Nombre maximal de couleurs</span>
+              <input id="colors" type="number" min="2" max="256" step="1" value="8" />
+            </label>
+            <div id="palette" aria-label="Palette des couleurs retenues"></div>
+          </div>
+          <p class="validation" id="parameterError" role="alert"></p>
+          <button id="resetButton" class="secondary-button reset-button" type="button">
+            Réinitialiser
+          </button>
+        </aside>
+      </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+    <script type="module" src="../../shared/components/course-header.js"></script>
+    <script type="module" src="./scripts/app.js?v=20261108-quant4"></script>
+  </body>
+</html>

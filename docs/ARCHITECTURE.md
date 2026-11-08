@@ -29,6 +29,7 @@ tim/
   morphologie/
   couleurs/
   histogrammes/
+  quantification/        # Échantillonnage spatial et réduction des niveaux/couleurs
 ```
 
 Un composant reste au niveau le plus proche de ses utilisateurs. Un nouveau

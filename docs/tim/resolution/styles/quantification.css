@@ -1,0 +1,63 @@
+.quantization-title {
+  margin-top: 22px;
+}
+.quantization-methods {
+  grid-template-columns: 1fr;
+  margin-bottom: 14px;
+}
+.operation-options {
+  grid-template-columns: 1fr;
+  margin-bottom: 18px;
+}
+#samplingSettings[hidden],
+#quantizationMethods[hidden] {
+  display: none;
+}
+.workbench .field {
+  margin-top: 12px;
+}
+.parameter-note {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  margin: 10px 0;
+}
+#uniformSettings[hidden],
+#kmeansSettings[hidden],
+#modeField[hidden] {
+  display: none;
+}
+#palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 12px;
+}
+.palette-color {
+  width: 25px;
+  height: 25px;
+  border: 1px solid #64748b55;
+  border-radius: 4px;
+}
+.image-panel .panel-heading {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.image-panel .panel-heading > span {
+  display: inline;
+  font-size: 0.7rem;
+}
+.image-panel .panel-heading > span[hidden] {
+  display: none;
+}
+.display-settings-heading {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+@media (min-width: 1181px) {
+  .workbench {
+    max-height: calc(100dvh - 190px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
