@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reduceArea, enlargeLinear, reconstructChannels, reconstructionView } from '../scripts/reconstruction.js';
+import { reduceArea, enlargeLinear, reconstructChannels, reconstructionView } from "../../shared/compute/reconstruction.js?v=20261106-science1";
 
 test('La réduction moyenne les blocs 2×2 et gère les dimensions impaires', () => {
   assert.deepEqual([...reduceArea(Uint8Array.of(0, 20, 40, 60), 2, 2).data], [30]);

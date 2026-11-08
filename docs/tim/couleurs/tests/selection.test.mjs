@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALL_HSV, selectHSV, selectionView } from '../scripts/hsv-selection.js';
+import { ALL_HSV, selectHSV, selectionView } from "../../shared/compute/hsv-selection.js?v=20261106-science1";
 import { selectColorRepresentatives, cloudTrace } from '../scripts/clouds.js';
 
 test('Seuils inclusifs H/S/V et intervalle H traversant le rouge du TP', () => {

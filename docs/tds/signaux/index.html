@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr"
+  ><head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Créez et superposez des signaux temporels." />
+    <title>TDS - Création de signaux</title>
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../../shared/styles/theme.css" />
+    <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" />
+    <link rel="stylesheet" href="./styles/signaux.css?v=20261106-tds3" />
+  </head>
+  <body>
+    <course-header
+      page-title="Création de signaux"
+      course-code="TDS"
+      course-name="Traitement du signal"
+      instructor="Robin Condat"
+    ></course-header>
+    <main>
+      <div class="signal-layout">
+        <div class="charts-workspace">
+          <article class="chart-panel signal-panel">
+            <div class="chart-heading"><h2>Signaux temporels</h2></div>
+            <div class="chart-stage" id="timeStage"
+              ><canvas id="timeChart"></canvas
+              ><div class="chart-empty" id="timeEmpty"
+                >Ajoutez ou chargez un signal pour commencer</div
+              ><output class="chart-tooltip" id="timeTooltip" hidden=""></output
+            ></div>
+          </article>
+        </div>
+
+        <aside class="signal-workbench" aria-label="Création des signaux">
+          <section class="workbench-section">
+            <div class="section-heading"><h2>Signaux</h2></div>
+            <div class="signal-list" id="signalList"></div>
+            <div class="signal-actions">
+              <button class="secondary-button" id="createSignal" type="button"
+                >Créer un signal</button
+              >
+              <button class="secondary-button" id="loadWav" type="button"
+                >Charger un signal WAV</button
+              >
+            </div>
+            <input id="wavInput" type="file" accept=".wav,audio/wav,audio/x-wav" hidden="" />
+            <p class="validation" id="signalError" role="alert"></p>
+          </section>
+
+          <button class="secondary-button reset-button" id="resetButton" type="button"
+            >Réinitialiser</button
+          >
+        </aside>
+      </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@14.8.1/lib/browser/math.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+    <script type="module" src="../../shared/components/course-header.js"></script>
+    <script type="module" src="./scripts/app.js?v=20261106-tds3"></script> </body
+></html>

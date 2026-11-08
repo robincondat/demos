@@ -1,0 +1,5 @@
+@import url("../../shared/styles/tds-platform.css?v=20261106-tds3");
+
+.chart-stage {
+  height: clamp(360px, 65vh, 760px);
+}

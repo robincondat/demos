@@ -1,0 +1,46 @@
+@import url("../../shared/styles/tds-platform.css?v=20261106-tds3");
+.charts-workspace {
+  display: grid;
+  gap: 14px;
+}
+.chart-stage {
+  height: clamp(260px, 32vh, 440px);
+}
+.ideal-filter-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+#singleCutoff[hidden],
+#bandCutoffs[hidden],
+.signal-actions[hidden] {
+  display: none;
+}
+.plot-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.75rem;
+}
+.plot-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 15px;
+  height: 3px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.input-key::before {
+  background: #168665;
+}
+.output-key::before {
+  background: #e07a2d;
+}
+.mask-key::before {
+  background: #7564c9;
+}
+@media (max-width: 600px) {
+  .chart-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

@@ -1,0 +1,9 @@
+@import url("../../shared/styles/pair-platform.css?v=20261106-tds3");
+
+.correlation-method-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+.normalization-option[hidden] {
+  display: none;
+}

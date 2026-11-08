@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Transformations par histogramme et tables de correspondance."
+    />
+    <title>TIM - Histogrammes</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101a2c'/%3E%3Cg fill='%234fd1c5'%3E%3Crect x='12' y='12' width='11' height='11' rx='2'/%3E%3Crect x='27' y='12' width='11' height='11' rx='2'/%3E%3Crect x='42' y='12' width='11' height='11' rx='2'/%3E%3Crect x='12' y='27' width='11' height='11' rx='2'/%3E%3Crect x='27' y='27' width='11' height='11' rx='2' fill='%23f3b743'/%3E%3Crect x='42' y='27' width='11' height='11' rx='2'/%3E%3Crect x='12' y='42' width='11' height='11' rx='2'/%3E%3Crect x='27' y='42' width='11' height='11' rx='2'/%3E%3Crect x='42' y='42' width='11' height='11' rx='2'/%3E%3C/g%3E%3C/svg%3E"
+    />
+
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../shared/styles/image-viewer.css?v=20261106-histcurves" />
+    <link rel="stylesheet" href="../../shared/styles/theme.css" />
+    <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+
+    <link rel="stylesheet" href="./styles/histogrammes.css?v=20261108-info-visible" />
+  </head>
+  <body>
+    <course-header
+      page-title="Histogrammes"
+      course-code="TIM"
+      course-name="Traitement d’Images"
+      instructor="Robin Condat"
+    ></course-header>
+
+    <main>
+      <template
+        data-tim-component="upload"
+        data-metadata="none"
+        data-download-label="Télécharger le résultat"
+      ></template>
+
+      <div class="workspace-layout">
+        <div class="visual-workspace">
+          <section class="comparison" aria-label="Comparaison des images">
+            <template
+              data-tim-component="image-panel"
+              data-kind="original"
+              data-title="Image originale"
+              data-empty="Chargez une image pour commencer"
+            >
+              <template data-slot="heading">
+                <h2>Image originale</h2>
+                <div class="image-header-tools">
+                  <label class="check tile-visibility" hidden>
+                    <input id="originalShowTiles" type="checkbox" checked />
+                    <span>Tuiles</span>
+                  </label>
+                </div>
+              </template>
+            </template>
+            <template
+              data-tim-component="image-panel"
+              data-kind="result"
+              data-title="Image traitée"
+              data-empty="Le résultat apparaîtra ici"
+            >
+              <template data-slot="heading">
+                <h2>Image traitée</h2>
+                <div class="image-header-tools">
+                  <label class="check tile-visibility" hidden>
+                    <input id="resultShowTiles" type="checkbox" checked />
+                    <span>Tuiles</span>
+                  </label>
+                </div>
+              </template>
+            </template>
+          </section>
+
+          <section class="display-tools" aria-label="Options d’affichage et navigation">
+            <template
+              data-tim-component="display-settings"
+              data-kind="original"
+              data-auto="false"
+            ></template>
+            <template data-tim-component="navigation" data-sync="false"></template>
+            <template
+              data-tim-component="display-settings"
+              data-kind="result"
+              data-auto="false"
+            ></template>
+          </section>
+          <template data-tim-component="histograms" data-large="true"></template>
+
+          <section class="analysis-strip" aria-label="Analyse des images">
+            <template
+              data-tim-component="information"
+              data-range-label="Plage originale"
+            ></template>
+
+            <template
+              data-tim-component="cursor"
+              data-original-label="Originale"
+              data-difference-label="Différence"
+            ></template>
+          </section>
+        </div>
+
+        <aside class="workbench" aria-label="Transformations par histogramme"></aside>
+      </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+
+    <script type="module" src="../../shared/components/course-header.js"></script>
+
+    <script type="module" src="./scripts/app.js?v=20261108-histlayout"></script>
+  </body>
+</html>

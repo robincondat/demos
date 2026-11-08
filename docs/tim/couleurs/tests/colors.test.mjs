@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { convertRGB, convertedView, originalView, displayPixels } from '../scripts/colors.js';
+import { convertRGB } from "../../shared/compute/color-spaces.js?v=20261106-science1";
+import { convertedView, originalView, displayPixels } from '../scripts/colors.js';
 
 const rgba = pixels => Uint8ClampedArray.from(pixels.flatMap(pixel => [...pixel, 255]));
 

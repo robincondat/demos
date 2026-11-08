@@ -1,4 +1,5 @@
-import { convertRGB } from './colors.js?v=20261103-gray1';
+import { convertRGB } from "../../shared/compute/color-spaces.js?v=20261106-science1";
+
 
 export const MAX_CLOUD_POINTS = 50000;
 

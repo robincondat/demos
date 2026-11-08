@@ -1,4 +1,17 @@
-import { applyFilter } from "./filters.js";
+import { createDisplayControls } from "../../shared/scripts/display-controls.js?v=20261106-ui2";
+import {
+  canvasIsGrayscale,
+  readCanvasImage,
+  makeDisplayImage,
+} from "../../shared/scripts/opencv-image.js?v=20261106-ui2";
+import { mountImageComponents } from "../../shared/scripts/image-components.js?v=20261106-ui2";
+import {
+  downloadCanvas,
+  bindImageCursor,
+  renderBorderPreview,
+} from "../../shared/scripts/image-actions.js?v=20261106-ui2";
+import { loadOpenCV } from "../../shared/scripts/opencv-runtime.js?v=20261106-science1";
+import { applyFilter } from "../../shared/compute/spatial-filters.js?v=20261106-science1";
 import {
   resizeKernel,
   readKernel,
@@ -6,15 +19,19 @@ import {
   normalizeKernel,
   enableKernelTableEditing,
 } from "./kernel.js";
-import { drawFileToCanvas } from "../../../shared/scripts/image-loaders.js";
-import { createSyncedViewer } from "../../../shared/scripts/viewer.js";
-import { createAnalysisView } from "../../../shared/scripts/analysis.js";
+import {
+  createImageApplication,
+  copyImageCanvas,
+} from "../../shared/scripts/image-application.js?v=20261106-controller1";
+import { createSyncedViewer } from "../../shared/scripts/viewer.js?v=20261106-science1";
+import { createAnalysisView } from "../../shared/scripts/analysis.js?v=20261106-histcurves";
 import { byId, collectElements } from "./ui.js";
+
+mountImageComponents();
 
 let cvReady = false,
   imageReady = false,
   kernelInputs = [],
-  timer = null,
   workingMode = "RGB",
   imageDescription = "",
   lastResult = null;
@@ -65,104 +82,26 @@ function validate() {
   let error = "";
   if (width < 1 || height < 1 || width > 31 || height > 31)
     error = "Les dimensions doivent être comprises entre 1 et 31.";
-  else if (
-    (filter === "median" || filter === "gaussian") &&
-    (width % 2 === 0 || height % 2 === 0)
-  )
+  else if ((filter === "median" || filter === "gaussian") && (width % 2 === 0 || height % 2 === 0))
     error = "Ce filtre exige des dimensions impaires.";
   else if (filter === "median" && width < 3)
-    error =
-      "Le filtre médian exige une taille impaire supérieure ou égale à 3.";
+    error = "Le filtre médian exige une taille impaire supérieure ou égale à 3.";
   els.dimensionError.textContent = filter === "convolution" ? "" : error;
-  els.kernelDialogDimensionError.textContent =
-    filter === "convolution" ? error : "";
+  els.kernelDialogDimensionError.textContent = filter === "convolution" ? error : "";
   return !error;
 }
+const displayControls = Object.fromEntries(
+  ["original", "result"].map((kind) => [kind, createDisplayControls(kind)]),
+);
 function displayRange(kind) {
-  const minInput = els[`${kind}DisplayMin`],
-    maxInput = els[`${kind}DisplayMax`],
-    auto = els[`${kind}AutoRange`].checked,
-    error = els[`${kind}DisplayRangeError`],
-    min = Number.parseFloat(minInput.value),
-    max = Number.parseFloat(maxInput.value),
-    valid = auto || (Number.isFinite(min) && Number.isFinite(max) && max > min);
-  minInput.disabled = auto;
-  maxInput.disabled = auto;
-  error.textContent = valid
-    ? ""
-    : "La valeur blanche doit être strictement supérieure à la valeur noire.";
-  return { min, max, auto, valid, error };
+  return displayControls[kind].read();
 }
-
 // ---------------------------------------------------------------------------
 // Conversion OpenCV et rendu des images
 // ---------------------------------------------------------------------------
 
-function canvasIsGrayscale(canvas) {
-  const data = canvas
-    .getContext("2d")
-    .getImageData(0, 0, canvas.width, canvas.height).data;
-  for (let i = 0; i < data.length; i += 4)
-    if (data[i] !== data[i + 1] || data[i] !== data[i + 2]) return false;
-  return true;
-}
 function readWorkingImage() {
-  const rgba = cv.imread(els.source),
-    base = new cv.Mat(),
-    floatImage = new cv.Mat();
-  try {
-    cv.cvtColor(
-      rgba,
-      base,
-      workingMode === "Grayscale" ? cv.COLOR_RGBA2GRAY : cv.COLOR_RGBA2RGB,
-    );
-    base.convertTo(floatImage, cv.CV_32F);
-    return floatImage;
-  } finally {
-    rgba.delete();
-    base.delete();
-  }
-}
-function matRange(mat) {
-  const channels = new cv.MatVector();
-  cv.split(mat, channels);
-  let min = Infinity,
-    max = -Infinity;
-  try {
-    for (let i = 0; i < channels.size(); i++) {
-      const channel = channels.get(i);
-      try {
-        const values = cv.minMaxLoc(channel);
-        min = Math.min(min, values.minVal);
-        max = Math.max(max, values.maxVal);
-      } finally {
-        channel.delete();
-      }
-    }
-    return { min, max };
-  } finally {
-    channels.delete();
-  }
-}
-function formatValue(value) {
-  return Number(value.toPrecision(6)).toString();
-}
-function makeDisplayImage(floatImage, range) {
-  let { min, max } = range;
-  if (range.auto) {
-    ({ min, max } = matRange(floatImage));
-    range.error.textContent =
-      min === max
-        ? `Image uniforme : ${formatValue(min)}`
-        : `Plage utilisée : ${formatValue(min)} → ${formatValue(max)}`;
-  }
-  if (min === max) max = min + 1;
-  range.resolvedMin = min;
-  range.resolvedMax = max;
-  const display = new cv.Mat(),
-    scale = 255 / (max - min);
-  floatImage.convertTo(display, cv.CV_8U, scale, -min * scale);
-  return display;
+  return readCanvasImage(els.source, { mode: workingMode });
 }
 function renderOriginal() {
   const range = displayRange("original");
@@ -199,49 +138,56 @@ function settings() {
 // ---------------------------------------------------------------------------
 
 function schedule() {
-  clearTimeout(timer);
-  timer = setTimeout(processImage, 75);
+  application.schedule(calculate);
 }
 function processImage() {
+  return application.run(calculate);
+}
+function calculate() {
   const range = displayRange("result");
   if (!cvReady || !imageReady || !validate() || !range.valid) return;
-  els.processing.hidden = false;
-  requestAnimationFrame(() => {
-    const start = performance.now();
-    let src, dst, display;
-    try {
-      src = readWorkingImage();
-      dst = applyFilter(src, settings());
-      display = makeDisplayImage(dst, range);
-      cv.imshow(els.result, display);
-      lastResult?.delete();
-      lastResult = dst;
-      dst = null;
-      analysis.setResult(lastResult, range);
-      els.resultBadge.textContent = `${lastResult.cols} × ${lastResult.rows} px · ${workingMode} float32`;
-      els.timing.textContent = `Calcul : ${Math.round(performance.now() - start)} ms · ${workingMode} float32`;
-      els.download.disabled = false;
-    } catch (error) {
-      els.timing.textContent = `Erreur : ${error.message}`;
-      console.error(error);
-    } finally {
-      src?.delete();
-      dst?.delete();
-      display?.delete();
-      els.processing.hidden = true;
-    }
-  });
-}
-async function drawImage(file) {
-  imageReady = false;
-  lastResult?.delete();
-  lastResult = null;
-  analysis.clearCursor();
-  els.download.disabled = true;
-  els.fileName.textContent = file.name;
-  els.imageMeta.textContent = "Décodage de l’image…";
+
+  const start = performance.now();
+  let src, dst, display;
   try {
-    const decoded = await drawFileToCanvas(file, els.source);
+    src = readWorkingImage();
+    dst = applyFilter(src, settings());
+    display = makeDisplayImage(dst, range);
+    cv.imshow(els.result, display);
+    lastResult?.delete();
+    lastResult = dst;
+    dst = null;
+    analysis.setResult(lastResult, range);
+    els.resultBadge.textContent = `${lastResult.cols} × ${lastResult.rows} px · ${workingMode} float32`;
+    els.timing.textContent = `Calcul : ${Math.round(performance.now() - start)} ms · ${workingMode} float32`;
+    els.download.disabled = false;
+  } finally {
+    src?.delete();
+    dst?.delete();
+    display?.delete();
+  }
+}
+const application = createImageApplication({
+  delay: 75,
+  frame: true,
+  onBusy: (busy) => {
+    els.processing.hidden = !busy;
+  },
+  onError: (error) => {
+    els.timing.textContent = `Erreur : ${error.message}`;
+    console.error(error);
+  },
+  onLoadStart(file) {
+    imageReady = false;
+    lastResult?.delete();
+    lastResult = null;
+    analysis.clearCursor();
+    els.download.disabled = true;
+    els.fileName.textContent = file.name;
+    els.imageMeta.textContent = "Décodage de l’image…";
+  },
+  onImage({ file, canvas, decoded }) {
+    copyImageCanvas(els.source, canvas);
     workingMode = canvasIsGrayscale(els.source) ? "Grayscale" : "RGB";
     els.original.width = decoded.width;
     els.original.height = decoded.height;
@@ -260,11 +206,18 @@ async function drawImage(file) {
     imageReady = true;
     renderOriginal();
     schedule();
-  } catch (error) {
+  },
+  onLoadError(error) {
     els.imageMeta.textContent = error.message;
     els.timing.textContent = "Chargement impossible";
     console.error(error);
-  }
+  },
+  onLoadEnd() {
+    els.input.value = "";
+  },
+});
+function drawImage(file) {
+  return application.load(file);
 }
 
 // ---------------------------------------------------------------------------
@@ -295,14 +248,12 @@ function updateKernelSum() {
   els.kernelError.textContent = "";
 }
 function updateBorderDemo() {
-  const examples = {
-    constant: "<em>0 0</em> │ a b c d │ <em>0 0</em>",
-    replicate: "<em>a a</em> │ a b c d │ <em>d d</em>",
-    reflect: "<em>b a</em> │ a b c d │ <em>d c</em>",
-    reflect101: "<em>c b</em> │ a b c d │ <em>c b</em>",
-  };
-  els.borderDemo.innerHTML = examples[els.border.value];
-  els.borderValueField.hidden = els.border.value !== "constant";
+  renderBorderPreview({
+    preview: els.borderDemo,
+    valueField: els.borderValueField,
+    border: els.border.value,
+    value: els.borderValue.value,
+  });
 }
 function updateMode() {
   const filter = selectedFilter(),
@@ -310,26 +261,16 @@ function updateMode() {
     gaussian = filter === "gaussian",
     convolution = filter === "convolution",
     labels = {
-      mean: [
-        "Paramètres du filtre moyenneur",
-        "Lissage uniforme par moyenne locale.",
-      ],
-      median: [
-        "Paramètres du filtre médian",
-        "Remplacement par la médiane du voisinage.",
-      ],
+      mean: ["Paramètres du filtre moyenneur", "Lissage uniforme par moyenne locale."],
+      median: ["Paramètres du filtre médian", "Remplacement par la médiane du voisinage."],
       gaussian: [
         "Paramètres du filtre gaussien",
         "Lissage pondéré par une distribution gaussienne.",
       ],
-      convolution: [
-        "Paramètres de convolution",
-        "Application d’un noyau personnalisé.",
-      ],
+      convolution: ["Paramètres de convolution", "Application d’un noyau personnalisé."],
     };
   els.parameterPanel.dataset.filter = filter;
-  [els.parameterTitle.textContent, els.parameterDescription.textContent] =
-    labels[filter];
+  [els.parameterTitle.textContent, els.parameterDescription.textContent] = labels[filter];
   els.kernelSizeSection.hidden = convolution;
   els.widthLabel.textContent = median ? "Largeur / hauteur" : "Largeur";
   els.heightField.hidden = median;
@@ -342,8 +283,7 @@ function updateMode() {
       ? "Largeur et hauteur doivent être impaires."
       : "Toutes les dimensions positives sont acceptées.";
   if (median && n(els.width) < 3) els.width.value = 3;
-  if ((gaussian || median) && n(els.width) % 2 === 0)
-    els.width.value = n(els.width) + 1;
+  if ((gaussian || median) && n(els.width) % 2 === 0) els.width.value = n(els.width) + 1;
   if (gaussian && n(els.height) % 2 === 0) els.height.value = n(els.height) + 1;
   if (convolution) {
     els.convolutionWidth.value = els.width.value;
@@ -381,18 +321,18 @@ function reset() {
 // Branchement des événements de l'interface
 // ---------------------------------------------------------------------------
 
-window.addEventListener("opencv-ready", () => {
-  cvReady = true;
-  byId("runtimeDot").parentElement.classList.add("ready");
-  els.runtime.textContent = "OpenCV prêt";
-  renderOriginal();
-  schedule();
-});
-if (window.cv?.Mat) {
-  cvReady = true;
-  byId("runtimeDot").parentElement.classList.add("ready");
-  els.runtime.textContent = "OpenCV prêt";
-}
+loadOpenCV()
+  .then(() => {
+    cvReady = true;
+    byId("runtimeDot").parentElement.classList.add("ready");
+    els.runtime.textContent = "OpenCV pr\u00eat";
+    renderOriginal();
+    schedule();
+  })
+  .catch((error) => {
+    els.runtime.textContent = error.message;
+    els.dimensionError.textContent = error.message;
+  });
 els.input.addEventListener("change", (e) => {
   const [file] = e.target.files;
   if (file) drawImage(file);
@@ -409,9 +349,8 @@ document
 );
 [els.border, els.borderValue, els.sigmaX, els.sigmaY].forEach((input) =>
   input.addEventListener("input", () => {
-    if (input === els.border) updateBorderDemo();
-    if (input === els.sigmaX && els.linkSigma.checked)
-      els.sigmaY.value = els.sigmaX.value;
+    if (input === els.border || input === els.borderValue) updateBorderDemo();
+    if (input === els.sigmaX && els.linkSigma.checked) els.sigmaY.value = els.sigmaX.value;
     schedule();
   }),
 );
@@ -422,8 +361,7 @@ els.linkSigma.addEventListener("change", () => {
 });
 byId("normalizeKernel").addEventListener("click", () => {
   if (!normalizeKernel(kernelInputs)) {
-    els.kernelError.textContent =
-      "Impossible de normaliser : la somme du noyau est nulle.";
+    els.kernelError.textContent = "Impossible de normaliser : la somme du noyau est nulle.";
     return;
   }
   updateKernelSum();
@@ -436,16 +374,7 @@ byId("identityKernel").addEventListener("click", () => {
   schedule();
 });
 byId("resetButton").addEventListener("click", reset);
-els.download.addEventListener("click", () => {
-  els.result.toBlob((blob) => {
-    const a = document.createElement("a"),
-      url = URL.createObjectURL(blob);
-    a.href = url;
-    a.download = "image-filtree.png";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }, "image/png");
-});
+els.download.addEventListener("click", () => downloadCanvas(els.result, "image-filtree.png"));
 function updateConvolutionDimensions() {
   const width = Number.parseInt(els.convolutionWidth.value, 10),
     height = Number.parseInt(els.convolutionHeight.value, 10),
@@ -483,34 +412,23 @@ byId("openKernelEditor").addEventListener("click", () => {
     kernelInputs[0]?.select();
   });
 });
-byId("closeKernelDialog").addEventListener("click", () =>
-  els.kernelDialog.close(),
-);
-byId("closeKernelDialogIcon").addEventListener("click", () =>
-  els.kernelDialog.close(),
-);
+byId("closeKernelDialog").addEventListener("click", () => els.kernelDialog.close());
+byId("closeKernelDialogIcon").addEventListener("click", () => els.kernelDialog.close());
 els.kernelDialog.addEventListener("click", (event) => {
   if (event.target === els.kernelDialog) els.kernelDialog.close();
 });
-[els.originalDisplayMin, els.originalDisplayMax].forEach((input) =>
-  input.addEventListener("input", renderOriginal),
-);
-[els.resultDisplayMin, els.resultDisplayMax].forEach((input) =>
-  input.addEventListener("input", schedule),
-);
-els.originalAutoRange.addEventListener("change", renderOriginal);
-els.resultAutoRange.addEventListener("change", schedule);
+displayControls.original.bind(renderOriginal);
+displayControls.result.bind(schedule);
+
 displayRange("original");
 displayRange("result");
-for (const stage of [els.originalStage, els.resultStage]) {
-  stage.addEventListener("pointermove", (event) => {
-    if (!imageReady || !lastResult) return;
-    const point = viewer.toImagePoint(stage, event.clientX, event.clientY);
-    if (point) analysis.setCursor(point.x, point.y, els.source, lastResult);
-    else analysis.clearCursor();
-  });
-  stage.addEventListener("pointerleave", () => analysis.clearCursor());
-}
+bindImageCursor({
+  stages: [els.originalStage, els.resultStage],
+  viewer,
+  enabled: () => imageReady && !!lastResult,
+  onPoint: ({ x, y }) => analysis.setCursor(x, y, els.source, lastResult),
+  clear: () => analysis.clearCursor(),
+});
 updateBorderDemo();
 rebuildKernel(false);
 updateMode();

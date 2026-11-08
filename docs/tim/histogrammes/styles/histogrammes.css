@@ -1,0 +1,182 @@
+.lut-section summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.lut-section[open] summary {
+  margin-bottom: 12px;
+}
+
+.analysis-strip {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.histogram-methods {
+  grid-template-columns: 1fr;
+}
+.comparison .panel-heading {
+  position: relative;
+  min-height: 44px;
+  gap: 8px;
+  padding: 8px 12px;
+}
+.comparison .panel-heading h2 {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+}
+.comparison .canvas-stage {
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.image-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.tile-visibility {
+  margin: 0;
+  gap: 5px;
+  white-space: nowrap;
+  font-size: 0.75rem;
+}
+.tile-visibility[hidden] {
+  display: none;
+}
+.histogram-panel.large-histograms {
+  margin-top: 8px;
+  padding: 10px 12px;
+}
+.large-histograms > h2 {
+  min-height: 1.2em;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+}
+.large-histograms .histograms figcaption {
+  margin-bottom: 6px;
+}
+@media (min-width: 851px) {
+  .comparison .canvas-stage {
+    height: clamp(160px, calc((100dvh - 340px) * 0.52), 380px);
+  }
+  .large-histograms .histograms canvas {
+    height: clamp(130px, calc((100dvh - 340px) * 0.32), 260px);
+  }
+}
+@media (min-width: 1181px) {
+  .workbench {
+    max-height: calc(100dvh - 190px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+@media (max-width: 850px) {
+  .comparison .canvas-stage {
+    height: clamp(190px, 52vw, 330px);
+  }
+  .large-histograms .histograms canvas {
+    height: 220px;
+  }
+}
+@media (max-width: 450px) {
+  .comparison .panel-heading {
+    flex-wrap: wrap;
+  }
+}
+.lut-section {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 18px;
+  min-width: 0;
+}
+.lut-section h3 {
+  font-size: 0.9rem;
+  margin: 0 0 8px;
+}
+#lutCanvas {
+  display: block;
+  width: 100%;
+  height: 230px;
+}
+.lut-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0;
+}
+.histogram-parameters {
+  margin-top: 14px;
+}
+.parameter-help {
+  margin: 8px 0 14px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+.clahe-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  pointer-events: none;
+  transform-origin: 0 0;
+  overflow: hidden;
+}
+.clahe-overlay[hidden] {
+  display: none;
+}
+.clahe-grid {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1;
+}
+.clahe-grid-halo {
+  fill: none;
+  stroke: #1119;
+}
+.clahe-tile {
+  fill: #087ee633;
+  stroke: #ffcb35;
+  stroke-width: 2;
+}
+#claheParameters[hidden],
+#lutDetails[hidden] {
+  display: none;
+}
+.histogram-parameters [hidden],
+.histogram-parameters[hidden] {
+  display: none;
+}
+
+@media (max-width: 650px) {
+  .analysis-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.two-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.two-fields > .field {
+  min-width: 0;
+}
+.two-fields input {
+  width: 100%;
+  min-width: 0;
+}
+.display-tools {
+  margin-top: 8px;
+}
+.display-tools .display-settings {
+  padding: 8px 10px;
+}
+.display-tools .display-settings-heading {
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.display-tools .display-settings-heading strong {
+  font-size: 0.7rem;
+}
+.display-tools .display-range-fields input {
+  padding: 6px 8px;
+}

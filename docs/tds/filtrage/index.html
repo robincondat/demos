@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TDS - Filtrage idéal</title>
+    <link rel="stylesheet" href="../../shared/styles/base.css" /><link
+      rel="stylesheet"
+      href="../../shared/styles/theme.css"
+    /><link rel="stylesheet" href="../../shared/styles/course-header.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" />
+    <link rel="stylesheet" href="./styles/filtrage.css?v=20261106-tds3" />
+  </head>
+  <body>
+    <course-header
+      page-title="Filtrage idéal"
+      course-code="TDS"
+      course-name="Traitement du signal"
+      instructor="Robin Condat"
+    ></course-header>
+    <main
+      ><div class="signal-layout"
+        ><div class="charts-workspace">
+          <article class="chart-panel"
+            ><div class="chart-heading"
+              ><h2>Signaux temporels</h2
+              ><div class="plot-legend"
+                ><span class="input-key">Entrée</span><span class="output-key">Filtré</span></div
+              ></div
+            >
+            <div class="chart-stage" id="timeStage"
+              ><canvas id="timeChart"></canvas
+              ><output class="chart-tooltip" id="timeTooltip" hidden></output
+              ><div class="chart-empty" id="timeEmpty">Créez un signal ou chargez un WAV.</div></div
+            ></article
+          >
+          <article class="chart-panel"
+            ><div class="chart-heading"
+              ><h2>Filtrage fréquentiel</h2
+              ><div class="plot-legend"
+                ><span class="input-key">Entrée</span><span class="output-key">Filtré</span
+                ><span class="mask-key">H(f) · 0 ou 1</span></div
+              ></div
+            >
+            <div class="chart-stage" id="frequencyStage"
+              ><canvas id="frequencyChart"></canvas
+              ><output class="chart-tooltip" id="frequencyTooltip" hidden></output
+              ><div class="chart-empty" id="frequencyEmpty"
+                >Créez un signal pour voir son spectre et le filtre.</div
+              ></div
+            ></article
+          > </div
+        ><aside class="signal-workbench" aria-label="Signal et paramètres du filtre">
+          <section class="workbench-section"
+            ><div class="section-heading"><h2>Signal d’entrée</h2></div
+            ><div class="signal-list" id="signalList"></div>
+            <div class="signal-actions"
+              ><button class="secondary-button" id="createSignal" type="button"
+                >Créer un signal</button
+              ><button class="secondary-button" id="loadWav" type="button"
+                >Charger un signal WAV</button
+              ></div
+            ><input id="wavInput" type="file" accept=".wav,audio/wav,audio/x-wav" hidden
+          /></section>
+          <section class="workbench-section"
+            ><div class="section-heading"><h2>Filtre idéal</h2></div>
+            <fieldset class="filter-options ideal-filter-options"
+              ><legend class="sr-only">Type de filtre</legend>
+              <label
+                ><input type="radio" name="filterKind" value="lowpass" checked /><span
+                  ><b>Passe-bas</b></span
+                ></label
+              ><label
+                ><input type="radio" name="filterKind" value="highpass" /><span
+                  ><b>Passe-haut</b></span
+                ></label
+              >
+              <label
+                ><input type="radio" name="filterKind" value="bandpass" /><span
+                  ><b>Passe-bande</b></span
+                ></label
+              ><label
+                ><input type="radio" name="filterKind" value="bandstop" /><span
+                  ><b>Coupe-bande</b></span
+                ></label
+              >
+            </fieldset>
+            <div id="singleCutoff"
+              ><label class="field full"
+                ><span>Fréquence de coupure</span
+                ><div class="input-unit"
+                  ><input id="cutoff" type="number" min="0" step="any" value="100" /><span
+                    >Hz</span
+                  ></div
+                ></label
+              ></div
+            >
+            <div class="two-fields" id="bandCutoffs" hidden
+              ><label class="field"
+                ><span>Coupure basse</span
+                ><div class="input-unit"
+                  ><input id="low" type="number" min="0" step="any" value="100" /><span
+                    >Hz</span
+                  ></div
+                ></label
+              ><label class="field"
+                ><span>Coupure haute</span
+                ><div class="input-unit"
+                  ><input id="high" type="number" min="0" step="any" value="200" /><span
+                    >Hz</span
+                  ></div
+                ></label
+              ></div
+            >
+            <p class="sampling-info" id="samplingInfo"></p
+            ><p class="validation" id="signalError" role="alert"></p> </section
+          ><button class="secondary-button reset-button" id="resetButton" type="button"
+            >Réinitialiser</button
+          >
+        </aside></div
+      ></main
+    >
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@14.8.1/lib/browser/math.js"></script
+    ><script src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+    <script type="module" src="../../shared/components/course-header.js"></script
+    ><script type="module" src="./scripts/app.js?v=20261106-tds3"></script> </body
+></html>

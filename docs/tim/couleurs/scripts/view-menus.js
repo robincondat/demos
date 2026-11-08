@@ -1,4 +1,4 @@
-import { SPACES } from './colors.js?v=20261103-gray1';
+import { SPACES } from './colors.js?v=20261106-science1';
 
 export const ORIGINAL_VIEW_GROUPS = [
   { label: 'Image', options: [['rgb', 'RGB']] },
