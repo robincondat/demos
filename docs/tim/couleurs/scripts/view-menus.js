@@ -20,7 +20,7 @@ export function resultViewGroups(space) {
   if (space === 'ycbcr') groups.push({ label: 'Reconstructions', options: [['reduced-rgb', 'Après réduction RGB'], ['reduced-chroma', 'Après réduction Cb/Cr']] });
   if (space === 'hsv') groups.push(
     { label: 'Nuages', options: [['cloud', 'HSV 3D'], ['cloud-top', 'HSV — Dessus']] },
-    { label: 'Sélection HSV', options: [['mask', 'Masque de sélection'], ['selected', 'Pixels sélectionnés (RGB)']] },
+    { label: 'Sélection HSV', options: [['mask', 'Masque de sélection'], ['selected', 'Pixels sélectionnés (RGB)'], ['hue-shift', 'Image recolorée (RGB)']] },
   );
   return groups;
 }

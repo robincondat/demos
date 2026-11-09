@@ -41,3 +41,24 @@ export function selectionView(rgba, mask, binary = false) {
     max: 255,
   };
 }
+
+// Décalage en degrés ; le masque reste défini sur l’image originale.
+export function shiftSelectedHue(rgba, mask, degrees) {
+  const data = new Uint8Array((rgba.length / 4) * 3);
+  for (let i = 0, p = 0; i < rgba.length; i += 4, p++) {
+    const rgb = [rgba[i], rgba[i + 1], rgba[i + 2]];
+    const max = Math.max(...rgb), min = Math.min(...rgb), delta = max - min;
+    if (mask[p] && delta && degrees % 360) {
+      let h = max === rgb[0] ? (rgb[1] - rgb[2]) / delta
+        : max === rgb[1] ? (rgb[2] - rgb[0]) / delta + 2
+        : (rgb[0] - rgb[1]) / delta + 4;
+      h = ((h + degrees / 60) % 6 + 6) % 6;
+      const x = delta * (1 - Math.abs(h % 2 - 1));
+      const sectors = [[delta, x, 0], [x, delta, 0], [0, delta, x],
+        [0, x, delta], [x, 0, delta], [delta, 0, x]];
+      for (let c = 0; c < 3; c++) rgb[c] = Math.round(sectors[Math.floor(h)][c] + min);
+    }
+    data.set(rgb, p * 3);
+  }
+  return { data, channels: 3, labels: ["R", "G", "B"], max: 255 };
+}

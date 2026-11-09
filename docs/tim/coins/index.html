@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Détection de coins par Harris et Shi-Tomasi : gradients, scores, seuillage, NMS et affinage subpixel."
+    />
+    <title>TIM — Détection de coins</title>
+    <link rel="icon" type="image/svg+xml" href="../shared/favicon.svg" />
+    <link rel="stylesheet" href="../../shared/styles/base.css" />
+    <link rel="stylesheet" href="../shared/styles/image-viewer.css?v=20261106-histcurves" />
+    <link rel="stylesheet" href="../../shared/styles/theme.css" />
+    <link rel="stylesheet" href="../../shared/styles/course-header.css" />
+    <link rel="stylesheet" href="./styles/coins.css?v=20261109-coins2" />
+  </head>
+  <body>
+    <course-header
+      page-title="Détection de coins"
+      course-code="TIM"
+      course-name="Traitement d’Images"
+      instructor="Robin Condat"
+    ></course-header>
+    <main>
+      <template data-tim-component="upload" data-metadata="none"></template>
+      <div class="workspace-layout">
+        <div class="visual-workspace">
+          <section class="comparison" aria-label="Comparaison des images">
+            <template
+              data-tim-component="image-panel"
+              data-kind="original"
+              data-title="Image originale (gris)"
+            ></template>
+            <template data-tim-component="image-panel" data-kind="result">
+              <template data-slot="heading">
+                <label class="result-view-label">
+                  <span>Visualisation</span>
+                  <select
+                    id="resultView"
+                    disabled
+                    aria-label="Étape du détecteur affichée"
+                  ></select>
+                </label>
+              </template>
+            </template>
+          </section>
+          <div class="view-options">
+            <label class="check" id="centerScoreField" hidden>
+              <input id="centerScore" type="checkbox" checked />
+              <span>Centrer le score de Harris sur zéro</span>
+            </label>
+            <span id="refinementLegend" hidden>
+              <span class="before-marker">● Avant</span>
+              ·
+              <span class="after-marker">● Après affinage</span>
+            </span>
+          </div>
+          <section class="display-tools" aria-label="Affichage et navigation">
+            <template data-tim-component="display-settings" data-kind="original"></template>
+            <template data-tim-component="navigation"></template>
+            <template
+              data-tim-component="display-settings"
+              data-kind="result"
+              data-auto="true"
+            ></template>
+          </section>
+          <section class="analysis-strip" aria-label="Analyse des images">
+            <template data-tim-component="information"></template>
+            <template data-tim-component="cursor"></template>
+            <template data-tim-component="histograms"></template>
+          </section>
+        </div>
+        <aside class="workbench" aria-label="Paramètres de détection">
+          <div class="section-title"><h2>Détecteur</h2></div>
+          <fieldset class="filter-options detector-options">
+            <legend class="sr-only">Méthode</legend>
+            <label>
+              <input type="radio" name="method" value="harris" checked />
+              <span><b>Harris</b></span>
+            </label>
+            <label>
+              <input type="radio" name="method" value="shi" />
+              <span><b>Shi-Tomasi</b></span>
+            </label>
+          </fieldset>
+          <section class="parameter-group">
+            <h3>Préparation</h3>
+            <label class="check">
+              <input id="preBlur" type="checkbox" />
+              <span>Lissage gaussien initial</span>
+            </label>
+            <label class="field" id="blurSizeField">
+              <span>Taille du lissage</span>
+              <input id="blurSize" type="number" min="1" max="31" step="2" value="3" />
+            </label>
+            <label class="field">
+              <span>Taille du voisinage (blockSize)</span>
+              <input id="blockSize" type="number" min="1" max="31" step="2" value="3" />
+            </label>
+          </section>
+          <section class="parameter-group">
+            <h3>Sélection des coins</h3>
+            <label class="field" id="kField">
+              <span>Coefficient k</span>
+              <input id="k" type="number" min="0.001" max="0.249" step="0.01" value="0.04" />
+            </label>
+            <label class="field">
+              <span>Seuil relatif α / qualityLevel</span>
+              <input id="quality" type="number" min="0.000001" max="1" step="0.01" value="0.01" />
+            </label>
+            <label class="field">
+              <span>Distance de suppression des voisins (px)</span>
+              <input id="minDistance" type="number" min="0" max="200" step="1" value="5" />
+            </label>
+            <label class="field" id="maxCornersField">
+              <span>Nombre maximal de coins (0 : tous)</span>
+              <input id="maxCorners" type="number" min="0" max="100000" step="1" value="0" />
+            </label>
+            <p id="cornerSummary" class="corner-summary" role="status"></p>
+          </section>
+          <section class="parameter-group">
+            <label class="check">
+              <input id="refineEnabled" type="checkbox" />
+              <span>Affinage subpixel</span>
+            </label>
+            <div id="refineSettings" hidden>
+              <label class="field">
+                <span>Demi-fenêtre d’affinage (px)</span>
+                <input id="refineRadius" type="number" min="1" max="15" step="1" value="5" />
+              </label>
+              <p id="refineWindow" class="parameter-note">Fenêtre 11 × 11</p>
+              <div class="two-fields">
+                <label class="field">
+                  <span>Itérations max.</span>
+                  <input
+                    id="refineIterations"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value="40"
+                  />
+                </label>
+                <label class="field">
+                  <span>Précision (px)</span>
+                  <input
+                    id="refineEpsilon"
+                    type="number"
+                    min="0.000001"
+                    step="0.001"
+                    value="0.001"
+                  />
+                </label>
+              </div>
+            </div>
+          </section>
+          <p class="validation" id="parameterError" role="alert"></p>
+          <button id="resetButton" class="secondary-button reset-button" type="button">
+            Réinitialiser
+          </button>
+        </aside>
+      </div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
+    <script type="module" src="../../shared/components/course-header.js"></script>
+    <script type="module" src="./scripts/app.js?v=20261109-coins2"></script>
+  </body>
+</html>

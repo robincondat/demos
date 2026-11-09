@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const root = new URL('../../', import.meta.url);
-for (const platform of ['tds/fourier', 'tds/convolution', 'tds/correlation', 'tds/signaux', 'tds/filtrage', 'tim/contours', 'tim/filtrage', 'tim/morphologie', 'tim/couleurs', 'tim/histogrammes', 'tim/quantification']) {
+for (const platform of ['tds/fourier', 'tds/convolution', 'tds/correlation', 'tds/signaux', 'tds/filtrage', 'tim/contours', 'tim/filtrage', 'tim/morphologie', 'tim/couleurs', 'tim/histogrammes', 'tim/resolution', 'tim/coins']) {
   test(`${platform}: local assets and dependencies resolve`, async () => {
     const visited = new Set();
     async function visit(url) {

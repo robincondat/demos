@@ -8,11 +8,7 @@
       content="Explorez les composantes RGB, CMYK, YCbCr et HSV avec deux visualiseurs synchronisés."
     />
     <title>TIM - Espaces de couleurs</title>
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23101a2c'/%3E%3Cg fill='%234fd1c5'%3E%3Crect x='12' y='12' width='11' height='11' rx='2'/%3E%3Crect x='27' y='12' width='11' height='11' rx='2'/%3E%3Crect x='42' y='12' width='11' height='11' rx='2'/%3E%3Crect x='12' y='27' width='11' height='11' rx='2'/%3E%3Crect x='27' y='27' width='11' height='11' rx='2' fill='%23f3b743'/%3E%3Crect x='42' y='27' width='11' height='11' rx='2'/%3E%3Crect x='12' y='42' width='11' height='11' rx='2'/%3E%3Crect x='27' y='42' width='11' height='11' rx='2'/%3E%3Crect x='42' y='42' width='11' height='11' rx='2'/%3E%3C/g%3E%3C/svg%3E"
-    />
+    <link rel="icon" type="image/svg+xml" href="../shared/favicon.svg" />
     <!-- Composants communs à tous les démonstrateurs TIM. -->
     <link rel="stylesheet" href="../../shared/styles/base.css" />
     <link rel="stylesheet" href="../shared/styles/image-viewer.css?v=20261106-histcurves" />
@@ -165,7 +161,9 @@
                 step="1"
                 value="255"
                 aria-label="V maximum" /></div
-            ><p id="selectionError" class="validation" role="alert"></p
+            ><label for="hueShift">Décalage de H : <output id="hueShiftValue" for="hueShift">0</output></label
+            ><input id="hueShift" type="range" min="-90" max="90" step="1" value="0" style="width: 100%" />
+            <p id="selectionError" class="validation" role="alert"></p
             ><button id="resetSelection" class="secondary-button" type="button"
               >Réinitialiser la sélection</button
             ></section
@@ -186,6 +184,6 @@
     <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.min.js"></script>
 
     <script type="module" src="../../shared/components/course-header.js"></script>
-    <script type="module" src="./scripts/app.js?v=20261106-histcurves"></script>
+    <script type="module" src="./scripts/app.js?v=20261109-hue-units"></script>
   </body>
 </html>

@@ -32,13 +32,14 @@ import {
   ALL_HSV,
   selectHSV,
   selectionView,
-} from "../../shared/compute/hsv-selection.js?v=20261106-science1";
+  shiftSelectedHue,
+} from "../../shared/compute/hsv-selection.js?v=20261109-hue";
 import { reconstructionView } from "../../shared/compute/reconstruction.js?v=20261106-science1";
 import {
   ORIGINAL_VIEW_GROUPS,
   resultViewGroups,
   populateGroupedMenu,
-} from "./view-menus.js?v=20261106-science1";
+} from "./view-menus.js?v=20261109-hue";
 
 mountImageComponents();
 
@@ -245,7 +246,9 @@ function render() {
       );
     right = reconstructionCache.get(resultView);
   } else
-    right = ["selected", "mask"].includes(resultView)
+    right = resultView === "hue-shift"
+      ? shiftSelectedHue(source.data, selectionMask, 2 * Number($("hueShift").value))
+      : ["selected", "mask"].includes(resultView)
       ? selectionView(source.data, selectionMask, resultView === "mask")
       : convertedView(converted, isCloud("result") ? "stack" : resultView);
   if (isCloud("original")) {
@@ -376,7 +379,17 @@ document.querySelectorAll('input[name="space"]').forEach((input) =>
   }),
 );
 for (const name of Object.keys(ALL_HSV)) $(name).addEventListener("input", schedule);
+function resetHueShift() {
+  $("hueShift").value = 0;
+  $("hueShiftValue").textContent = "0";
+}
+$("hueShift").addEventListener("input", () => {
+  const value = Number($("hueShift").value);
+  $("hueShiftValue").textContent = `${value > 0 ? "+" : ""}${value}`;
+  schedule();
+});
 $("resetSelection").addEventListener("click", () => {
+  resetHueShift();
   for (const [name, value] of Object.entries(ALL_HSV)) $(name).value = value;
   selectionKey = "";
   schedule();
@@ -394,7 +407,7 @@ bindImageCursor({
     const i = point.y * source.width + point.x,
       rgb = source.data.slice(i * 4, i * 4 + 3),
       base = i * converted.channels;
-    const reconstructed = $("resultView").value.startsWith("reduced-");
+    const reconstructed = $("resultView").value.startsWith("reduced-") || $("resultView").value === "hue-shift";
     const resultValues = reconstructed
       ? Array.from(right.data.slice(i * 3, i * 3 + 3))
       : Array.from(converted.data.slice(base, base + converted.channels));
@@ -419,6 +432,7 @@ bindImageCursor({
   clear: clearCursor,
 });
 $("resetButton").addEventListener("click", () => {
+  resetHueShift();
   document.querySelector('input[name="space"][value="cmyk"]').checked = true;
   $("originalView").value = "rgb";
   populateViews();

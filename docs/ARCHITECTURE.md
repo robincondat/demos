@@ -29,7 +29,8 @@ tim/
   morphologie/
   couleurs/
   histogrammes/
-  quantification/        # Échantillonnage spatial et réduction des niveaux/couleurs
+  resolution/           # Échantillonnage spatial et réduction des niveaux/couleurs
+  coins/                # Harris, Shi-Tomasi, étapes et affinage subpixel
 ```
 
 Un composant reste au niveau le plus proche de ses utilisateurs. Un nouveau
@@ -95,6 +96,12 @@ OpenCV. Les matrices retournées appartiennent à l'appelant.
 `image-actions.js` regroupe l'export PNG, le suivi du curseur et l'aperçu des bords.
 Leurs styles sont regroupés dans `tim/shared/styles/image-viewer.css` ; les styles
 locaux conservent les dispositions et composants propres à chaque démonstration.
+
+La détection de coins est dans `tim/shared/compute/corners.js` : Harris et
+Shi-Tomasi utilisent exclusivement les détecteurs natifs OpenCV et leur
+sélection des points. Les cartes renvoyées possèdent leurs propres
+buffers, après libération des matrices OpenCV. `corner-refinement.js` implémente
+l'affinage par orthogonalité des gradients, absent du build OpenCV.js utilisé.
 
 ## Lancement local
 

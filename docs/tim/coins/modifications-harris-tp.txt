@@ -1,0 +1,220 @@
+HARRIS — MODIFICATIONS DU TP POUR SUIVRE OPENCV
+============================================
+
+Document de travail — 9 novembre 2026
+TP concerné : TP7_correction.ipynb, exercice Harris.
+Cible : cv2.goodFeaturesToTrack(..., useHarrisDetector=True), sans masque.
+Les changements ci-dessous concernent le TP ; le notebook original n'est pas modifié.
+
+1. OBJECTIF ET CHAÎNE À OBTENIR
+-----------------------------
+
+Image en niveaux de gris uint8
+  -> Sobel 3 x 3 normalisés, sortie float32
+  -> produits Ix², IxIy, Iy²
+  -> sommes uniformes sur un bloc blocksize x blocksize
+  -> score R = det(M) - k * trace(M)²
+  -> seuillage relatif alpha * max(R)
+  -> maxima locaux 3 x 3, sans la bordure extérieure
+  -> tri décroissant des scores
+  -> sélection gloutonne selon une distance euclidienne
+  -> éventuel affinage subpixel.
+
+2. MODIFICATIONS À REPORTER DANS LES CELLULES ET L'ÉNONCÉ
+------------------------------------------------------
+
+[ ] Retirer le GaussianBlur initial et la variable img_blur.
+    Les gradients doivent être calculés directement sur img.
+    Un préfiltrage reste possible, mais il faudrait alors appliquer le même
+    préfiltrage avant l'appel OpenCV servant à la comparaison.
+
+[ ] Conserver img en uint8 et utiliser cv2.CV_32F pour les gradients.
+    Supprimer les conversions img.astype(float), qui produisent du float64.
+    Pour un Sobel 3 x 3 et une entrée uint8 :
+        scale = 1.0 / (4 * blocksize * 255)
+    Cette formule n'est pas celle d'une entrée déjà convertie en flottant.
+
+[ ] Remplacer les GaussianBlur sur les trois produits par cv2.boxFilter,
+    avec normalize=False : on calcule des sommes, pas des moyennes.
+    Mettre à jour le texte : la pondération devient rectangulaire uniforme,
+    et non gaussienne. Avec cette fenêtre, blocksize n'a pas besoin d'être impair.
+
+[ ] Conserver la formule du score Harris et les cartes en float32.
+    Ne pas convertir R en uint8 ni normaliser R pour les calculs suivants.
+    La normalisation d'affichage de pyplot est indépendante de la détection.
+
+[ ] Conserver une étape « candidats après seuillage », puis ajouter une
+    étape « maxima locaux 3 x 3 ». Le maximum peut être calculé par dilatation.
+    Les égalités au maximum local sont acceptées, y compris sur les plateaux.
+    Exclure la première/dernière ligne et la première/dernière colonne
+    du masque des maxima, comme goodFeaturesToTrack.
+
+[ ] Passer le masque des maxima locaux à la NMS, pas tous les candidats.
+    Dans NMS, retirer la matrice allow et l'effacement d'un voisinage carré.
+    Rejeter un candidat si sa distance euclidienne à un point déjà retenu
+    est STRICTEMENT inférieure à min_distance.
+    Une distance exactement égale à min_distance est donc autorisée.
+
+[ ] Conserver le tri par score décroissant. Pour suivre le départage du
+    chemin CPU OpenCV en cas d'égalité : y décroissant, puis x décroissant.
+    np.lexsort((-xc, -yc, -scores)) permet de définir ce tri explicitement.
+
+[ ] Comparer avec les mêmes paramètres : blocksize, k, alpha/qualityLevel,
+    min_distance/minDistance et max_corners/maxCorners.
+    Exemple du notebook OpenCV : blocksize=5, k=0.04, alpha=0.01,
+    min_distance=7 et max_corners=0 (tous les coins).
+
+[ ] Gérer le cas où goodFeaturesToTrack renvoie None : aucun coin détecté.
+
+[ ] Garder les coordonnées float32 pour cornerSubPix. Convertir en entiers
+    uniquement pour dessiner. winSize=(5,5) correspond à une fenêtre 11 x 11.
+
+3. VERSION DE RÉFÉRENCE POUR LE CALCUL MANUEL
+-------------------------------------------
+
+Ce code conserve le détail des opérations pour accompagner les exercices.
+Il vise la même chaîne que le chemin CPU OpenCV. Les différences d'arrondi
+ou d'optimisation peuvent empêcher une égalité bit à bit des scores.
+
+    import cv2
+    import numpy as np
+
+    def NMS_opencv(R, mask, min_distance, max_corners=0):
+        yc, xc = np.nonzero(mask)
+        scores = R[yc, xc]
+
+        # Score décroissant, puis y décroissant, puis x décroissant.
+        order = np.lexsort((-xc, -yc, -scores))
+        selected = []
+        distance2 = min_distance ** 2
+
+        for index in order:
+            x, y = int(xc[index]), int(yc[index])
+            if any(
+                (x - x0)**2 + (y - y0)**2 < distance2
+                for x0, y0 in selected
+            ):
+                continue
+
+            selected.append((x, y))
+            if max_corners > 0 and len(selected) >= max_corners:
+                break
+
+        return np.asarray(selected, dtype=np.float32).reshape(-1, 2)
+
+
+    def Harris_corner_detection(
+        img, blocksize=5, k=0.04, alpha=0.01,
+        min_distance=7, max_corners=0
+    ):
+        if img is None or img.ndim != 2 or img.dtype != np.uint8:
+            raise ValueError("L'image doit être en niveaux de gris uint8.")
+
+        scale = 1.0 / (4 * blocksize * 255)
+        Ix = cv2.Sobel(
+            img, cv2.CV_32F, 1, 0, ksize=3,
+            scale=scale, borderType=cv2.BORDER_DEFAULT
+        )
+        Iy = cv2.Sobel(
+            img, cv2.CV_32F, 0, 1, ksize=3,
+            scale=scale, borderType=cv2.BORDER_DEFAULT
+        )
+
+        def aggregate(product):
+            return cv2.boxFilter(
+                product, -1, (blocksize, blocksize),
+                normalize=False, borderType=cv2.BORDER_DEFAULT
+            )
+
+        Sxx = aggregate(Ix * Ix)
+        Sxy = aggregate(Ix * Iy)
+        Syy = aggregate(Iy * Iy)
+        R = ((Sxx * Syy - Sxy**2) - k * (Sxx + Syy)**2).astype(np.float32)
+
+        _, R_seuil = cv2.threshold(
+            R, float(alpha * R.max()), 0, cv2.THRESH_TOZERO
+        )
+        corner_candidates = R_seuil != 0
+        local_max = cv2.dilate(R_seuil, None)
+        corner_maxima = corner_candidates & (R_seuil == local_max)
+        corner_maxima[[0, -1], :] = False
+        corner_maxima[:, [0, -1]] = False
+
+        corners = NMS_opencv(R, corner_maxima, min_distance, max_corners)
+        return R, corner_candidates, corner_maxima, corners
+
+Si le TP doit conserver l'ancienne signature, ne retourner que corners.
+Les autres sorties servent aux visualisations des étapes intermédiaires.
+La NMS présentée privilégie la lisibilité ; OpenCV accélère les recherches
+de voisins en organisant les points dans une grille spatiale.
+
+4. COMPARAISON AVEC LES FONCTIONS OPENCV
+-------------------------------------
+
+    img = cv2.imread("blox.jpg", cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        raise FileNotFoundError("blox.jpg")
+
+    R, candidates, maxima, corners = Harris_corner_detection(
+        img, blocksize=5, k=0.04, alpha=0.01,
+        min_distance=7, max_corners=0
+    )
+
+    R_cv = cv2.cornerHarris(
+        img, blockSize=5, ksize=3, k=0.04,
+        borderType=cv2.BORDER_DEFAULT
+    )
+    print("Écart maximal des cartes :", np.max(np.abs(R - R_cv)))
+
+    corners_cv = cv2.goodFeaturesToTrack(
+        img, maxCorners=0, qualityLevel=0.01, minDistance=7,
+        blockSize=5, useHarrisDetector=True, k=0.04
+    )
+    corners_cv = (
+        np.empty((0, 2), dtype=np.float32)
+        if corners_cv is None else corners_cv.reshape(-1, 2)
+    )
+    print("Nombre de coins, manuel / OpenCV :", len(corners), len(corners_cv))
+
+Comparer d'abord les cartes, puis les masques et enfin les coordonnées.
+Un écart d'arrondi près d'un seuil ou entre deux scores quasi égaux peut
+modifier un point retenu. L'ordre des coordonnées n'est pas un critère
+visuel de comparaison : comparer aussi les positions sur l'image.
+
+5. AFFINAGE ET DESSIN
+--------------------
+
+    if len(corners_cv):
+        refined = cv2.cornerSubPix(
+            img, corners_cv.reshape(-1, 1, 2).copy(),
+            (5, 5), (-1, -1),
+            (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 40, 0.001)
+        )
+        output = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        for x, y in refined.reshape(-1, 2):
+            cv2.circle(output, (int(round(x)), int(round(y))), 3, (255, 0, 0), 1)
+
+Les coordonnées refined restent flottantes. Les entiers ne servent qu'au dessin.
+Prévoir une image suffisamment grande pour la fenêtre d'affinage choisie.
+
+6. REPORT À SHI-TOMASI ET CORRECTION DES FORMULES
+-----------------------------------------------
+
+Reporter les mêmes étapes de gradients, agrégation et sélection dans Shi-Tomasi.
+Seule la formule du score change. Dans le texte actuel du TP, les expressions
+de det(M) et trace(M) sont inversées dans cette partie ; le code les utilise
+correctement. Les bonnes expressions sont :
+    det(M) = Sxx * Syy - Sxy**2
+    trace(M) = Sxx + Syy
+
+7. SOURCES DE RÉFÉRENCE — OPENCV 4.13.0
+--------------------------------------
+
+Harris, gradients et agrégation :
+https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/src/corner.cpp
+
+Seuillage, maxima locaux, tri et distance :
+https://github.com/opencv/opencv/blob/4.13.0/modules/imgproc/src/featureselect.cpp
+
+Documentation des fonctions et de cornerSubPix :
+https://docs.opencv.org/4.13.0/dd/d1a/group__imgproc__feature.html
