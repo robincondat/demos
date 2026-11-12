@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createImage } from "../compute/image.js";
-import { CORNER_DEFAULTS, validateCornerSettings, cornerCandidates } from "../compute/corners.js";
+import { CORNER_DEFAULTS, validateCornerSettings, cornerCandidates, cornerNMS } from "../compute/corners.js";
 import { refineCorners } from "../compute/corner-refinement.js";
 
 test("Thresholding selects strict positive responses and handles empty detections", () => {
@@ -19,8 +19,6 @@ test("Corner parameters validate active options only", () => {
     ...CORNER_DEFAULTS,
     method: "shi",
     k: NaN,
-    preBlur: false,
-    blurSize: NaN,
   });
   for (const changed of [
     { blockSize: 2 },
@@ -31,6 +29,23 @@ test("Corner parameters validate active options only", () => {
     { maxCorners: 1.5 },
   ])
     assert.throws(() => validateCornerSettings({ ...CORNER_DEFAULTS, ...changed }));
+});
+
+test("NMS separates local maxima from distance selection, keeps plateaus and excludes borders", () => {
+  const data = new Float64Array(81);
+  data[0] = 100;
+  data[2 * 9 + 2] = 10;
+  data[2 * 9 + 3] = 10;
+  data[5 * 9 + 2] = 8;
+  data[5 * 9 + 3] = 7;
+  const score = createImage({ width: 9, height: 9, channels: 1, data });
+  const candidates = cornerCandidates(score, 0.01);
+  const nms = cornerNMS(score, candidates.mask, 3);
+  assert.deepEqual(nms.maxima.map(({ x, y }) => [x, y]), [[2, 2], [3, 2], [2, 5]]);
+  assert.deepEqual(nms.points.map(({ x, y }) => [x, y]), [[2, 2], [2, 5]]);
+  assert.equal(nms.maximaMask.data[0], 0);
+  assert.equal(cornerNMS(score, candidates.mask, 3, 1).points.length, 1);
+  assert.equal(cornerNMS(score, candidates.mask, 0).points.length, 3);
 });
 test("Subpixel refinement preserves fractional coordinates and converges to a checkerboard intersection", async () => {
   const image = createImage({

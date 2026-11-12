@@ -24,6 +24,9 @@
 .two-fields .field {
   min-width: 0;
 }
+.two-fields:has(> [hidden]) {
+  grid-template-columns: 1fr;
+}
 .two-fields input {
   min-width: 0;
   width: 100%;
@@ -44,25 +47,28 @@
 }
 .comparison .panel-heading {
   min-height: 58px;
-}
-.result-view-label {
-  display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  min-width: 0;
-  flex: 1;
 }
-.result-view-label select {
+.comparison .panel-heading h2 {
+  flex-shrink: 0;
+}
+.view-choice {
+  margin-left: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+.view-choice select {
   min-width: 0;
   max-width: 100%;
-  flex: 1;
-  padding: 7px;
+  width: 260px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 7px;
   background: var(--panel);
   color: var(--text);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
 }
 .view-options {
   display: flex;
@@ -77,15 +83,6 @@
   margin: 0;
   font-size: 0.76rem;
 }
-#refinementLegend {
-  font-size: 0.76rem;
-}
-.before-marker {
-  color: #2384bd;
-}
-.after-marker {
-  color: #dc3545;
-}
 .display-settings-heading {
   flex-wrap: wrap;
   gap: 6px;
@@ -98,13 +95,5 @@
     max-height: calc(100dvh - 190px);
     overflow-y: auto;
     scrollbar-width: thin;
-  }
-}
-@media (max-width: 600px) {
-  .result-view-label {
-    flex-wrap: wrap;
-  }
-  .result-view-label select {
-    flex-basis: 100%;
   }
 }

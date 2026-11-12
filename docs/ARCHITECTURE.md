@@ -98,8 +98,11 @@ Leurs styles sont regroupés dans `tim/shared/styles/image-viewer.css` ; les sty
 locaux conservent les dispositions et composants propres à chaque démonstration.
 
 La détection de coins est dans `tim/shared/compute/corners.js` : Harris et
-Shi-Tomasi utilisent exclusivement les détecteurs natifs OpenCV et leur
-sélection des points. Les cartes renvoyées possèdent leurs propres
+Shi-Tomasi suivent la chaîne pédagogique du TP : Sobel normalisé, moyenne des
+produits, score, seuillage, maxima locaux 3 × 3 puis sélection gloutonne par
+distance euclidienne. Les filtrages utilisent OpenCV en double précision ;
+le NMS conserve des étapes intermédiaires indépendantes de l’affinage.
+Les cartes renvoyées possèdent leurs propres
 buffers, après libération des matrices OpenCV. `corner-refinement.js` implémente
 l'affinage par orthogonalité des gradients, absent du build OpenCV.js utilisé.
 

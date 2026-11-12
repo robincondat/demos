@@ -18,7 +18,7 @@ import {
   CORNER_DEFAULTS,
   validateCornerSettings,
   detectCorners,
-} from "../../shared/compute/corners.js?v=20261109-coins2";
+} from "../../shared/compute/corners.js?v=20261112-tp";
 import { refineCorners } from "../../shared/compute/corner-refinement.js?v=20261108-coins1";
 
 mountImageComponents();
@@ -61,8 +61,6 @@ const number = (id) => ($(id).value.trim() === "" ? NaN : Number($(id).value));
 function settings() {
   return {
     method: method(),
-    preBlur: $("preBlur").checked,
-    blurSize: number("blurSize"),
     blockSize: number("blockSize"),
     k: number("k"),
     quality: number("quality"),
@@ -72,7 +70,6 @@ function settings() {
 }
 function controls() {
   $("kField").hidden = method() !== "harris";
-  $("blurSizeField").hidden = !$("preBlur").checked;
   $("refineSettings").hidden = !$("refineEnabled").checked;
   const diameter = 2 * number("refineRadius") + 1;
   $("refineWindow").textContent = Number.isFinite(diameter)
@@ -84,7 +81,6 @@ function menu() {
     [
       "Préparation",
       [
-        ["smooth", computedSettings.preBlur ? "Image lissée" : "Image de calcul (gris)"],
         ["ix", "Gradient Ix"],
         ["iy", "Gradient Iy"],
       ],
@@ -104,12 +100,15 @@ function menu() {
     [
       "Détection",
       [
-        ["mask", "Masque des candidats"],
-        ["candidates", "Candidats sur l’image"],
-        ["coins", "Coins après NMS"],
-        ...(pipeline.refined ? [["refined", "Affinage : avant / après"]] : []),
+        ["mask", "Masque des pixels coins"],
+        ["candidates", "Coins tracés sur l'image"],
       ],
     ],
+    ["NMS", [
+      ["maxima", "Coins tracés après maxima locaux 3 × 3"],
+      ["coins", "Coins tracés après sélection par distance"],
+    ]],
+    ...(pipeline.refined ? [["Affinage", [["refined", "Coins affinés (subpixel)"]]]] : []),
   ];
   $("resultView").replaceChildren(
     ...groups.map(([label, items]) => {
@@ -156,9 +155,8 @@ function renderResult() {
   if (!pipeline || !image) return;
   $("downloadButton").disabled = true;
   const view = $("resultView").value,
-    numeric = !!pipeline.views[view] && view !== "mask";
+    numeric = !!pipeline.views[view] && !["mask", "maximaMask"].includes(view);
   $("centerScoreField").hidden = !(view === "score" && computedSettings.method === "harris");
-  $("refinementLegend").hidden = view !== "refined";
   for (const suffix of ["DisplayMin", "DisplayMax", "AutoRange"])
     $("result" + suffix).disabled = !numeric;
   let range;
@@ -194,9 +192,8 @@ function renderResult() {
         }
       ctx.stroke();
     } else if (view === "refined") {
-      drawPoints(ctx, pipeline.points, "#2384bd");
       drawPoints(ctx, pipeline.refined, "#dc3545");
-    } else drawPoints(ctx, pipeline.refined || pipeline.points, "#e32939");
+    } else drawPoints(ctx, view === "maxima" ? pipeline.maxima : pipeline.points, "#e32939");
     displayed = fromRGBA(ctx.getImageData(0, 0, image.width, image.height), { mode: "rgb" });
   }
   if (!numeric) $("resultDisplayRangeError").textContent = "";
@@ -230,7 +227,7 @@ async function calculate({ current }) {
   renderOriginal();
   renderResult();
   $("cornerSummary").textContent =
-    `${next.candidateCount.toLocaleString("fr-FR")} candidats · ${next.points.length.toLocaleString("fr-FR")} coins retenus`;
+    `${next.candidateCount.toLocaleString("fr-FR")} candidats · ${next.maxima.length.toLocaleString("fr-FR")} maxima · ${next.points.length.toLocaleString("fr-FR")} coins retenus`;
 }
 const application = createImageApplication({
   delay: 100,
@@ -315,9 +312,8 @@ $("downloadButton").addEventListener("click", () =>
 );
 $("resetButton").addEventListener("click", () => {
   document.querySelector('[name="method"][value="harris"]').checked = true;
-  for (const key of ["blurSize", "blockSize", "k", "quality", "minDistance", "maxCorners"])
+  for (const key of ["blockSize", "k", "quality", "minDistance", "maxCorners"])
     $(key).value = CORNER_DEFAULTS[key];
-  $("preBlur").checked = false;
   $("refineEnabled").checked = false;
   $("refineRadius").value = 5;
   $("refineIterations").value = 40;

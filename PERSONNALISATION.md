@@ -66,14 +66,14 @@ jour sa référence dans ce fichier.
 ## Modifier le comportement
 
 Les scripts propres au filtrage sont dans
-`dist/demos/filtrage/scripts/` :
+`docs/demos/filtrage/scripts/` :
 
 - `app.js` : orchestration et événements de l'interface ;
 - `ui.js` : références vers les éléments HTML ;
 - `filters.js` : application des filtres OpenCV ;
 - `kernel.js` : édition du noyau de convolution.
 
-Les modules réutilisables sont dans `dist/shared/scripts/` :
+Les modules réutilisables sont dans `docs/shared/scripts/` :
 
 - `image-loaders.js` : décodage des formats d'image ;
 - `viewer.js` : zoom et déplacement synchronisés ;
@@ -83,13 +83,13 @@ Une démonstration peut importer uniquement les modules dont elle a besoin.
 
 ## Tester localement
 
-Il faut servir le dossier `dist` avec un serveur HTTP ; ouvrir directement
+Il faut servir le dossier `docs` avec un serveur HTTP ; ouvrir directement
 `index.html` en `file://` peut empêcher le chargement des modules.
 
 Par exemple, depuis la racine du projet :
 
 ```bash
-python -m http.server 8000 --directory dist
+python -m http.server 8000 --directory docs
 ```
 
 Puis ouvrir <http://localhost:8000>.
